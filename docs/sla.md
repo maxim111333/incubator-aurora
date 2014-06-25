@@ -1,4 +1,4 @@
-Aurora Job SLA
+Aurora SLA Measurement
 --------------
 
 - [Overview](#overview)
@@ -18,18 +18,20 @@ and hosted services.
 The Aurora SLA feature currently supports stat collection only for service (non-cron)
 production jobs (`"production = True"` in your `.aurora` config).
 
-The feature is implemented as a background worker thread that periodically computes job
-instance counters from the existing scheduler `TaskEvent` history. The individual instance core
-metrics are refreshed every minute (configurable via `sla_stat_refresh_interval`). The core instance
-counters are subsequently aggregated by relevant grouping types before exporting to scheduler
-`/vars` endpoint (when using `vagrant` that would be `http://192.168.33.7:8081/vars`)
+Counters that track SLA measurements are computed periodically within the scheduler.
+The individual instance metrics are refreshed every minute (configurable via
+`sla_stat_refresh_interval`). The instance counters are subsequently aggregated by
+relevant grouping types before exporting to scheduler `/vars` endpoint (when using `vagrant`
+that would be `http://192.168.33.7:8081/vars`)
 
 ## Metric Details
 
 ### Platform Uptime
 
 *Aggregate amount of time a job spends in a non-runnable state due to platform unavailability
-or scheduling delays.*
+or scheduling delays. This metric tracks Aurora/Mesos uptime performance and reflects on any
+system-caused downtime events (tasks LOST or DRAINED). Any user-initiated task kills/restarts
+will not degrade this metric.*
 
 **Collection scope:**
 
@@ -38,17 +40,28 @@ or scheduling delays.*
 
 **Units:** percent
 
+A fault in the task environment may cause the Aurora/Mesos to have different views on the task state
+or lose track of the task existence. In such cases, the service task is marked as LOST and
+rescheduled by Aurora. For example, this may happen when the task stays in ASSIGNED or STARTING
+for too long or the Mesos slave becomes unhealthy (or disappears completely). The time between
+task entering LOST and its replacement reaching RUNNING state is counted towards platform downtime.
+
+Another example of a platform downtime event is the administrator-requested task rescheduling. This
+happens during planned Mesos slave maintenance when all slave tasks are marked as DRAINED and
+rescheduled elsewhere.
+
 To accurately calculate Platform Uptime, we must separate platform incurred downtime from user
 actions that put a service instance in a non-operational state. It is simpler to isolate
 user-incurred downtime and treat all other downtime as platform incurred.
 
-Currently, a user can cause existing service (task) downtime in only two ways: via `killTasks`
+Currently, a user can cause a healthy service (task) downtime in only two ways: via `killTasks`
 or `restartShards` RPCs. For both, their affected tasks leave an audit state transition trail
 relevant to uptime calculations. By applying a special "SLA meaning" to exposed task state
 transition records, we can build a deterministic downtime trace for every given service instance.
 
 A task going through a state transition carries one of three possible SLA meanings
-(see `SlaAlgorithm.java` for sla-to-task-state mapping):
+(see [SlaAlgorithm.java](../src/main/java/org/apache/aurora/scheduler/sla/SlaAlgorithm.java) for
+sla-to-task-state mapping):
 
 * Task is UP: starts a period where the task is considered to be up and running from the Aurora
   platform standpoint.
@@ -85,15 +98,16 @@ more details.
 
 ### Median Time To Assigned (MTTA)
 
-*Average time a job spends waiting for its tasks to get host-assigned. A combined metric that
-helps tracking job scheduling performance dependency on the requested resources (user scope)
-as well as the internal scheduler bin-packing algorithm efficiency (platform scope).*
+*Median time a job spends waiting for its tasks to be assigned to a host. This is a combined
+metric that helps tracking the dependency of scheduling performance on the requested resources
+(user scope) as well as the internal scheduler bin-packing algorithm efficiency (platform scope).*
 
 **Collection scope:**
 
 * Per job - `sla_<job_key>_mtta_ms`
 * Per cluster - `sla_cluster_mtta_ms`
-* Per instance size (small, medium, large, x-large, xx-large)
+* Per instance size (small, medium, large, x-large, xx-large). Size are defined in:
+[ResourceAggregates.java](../src/main/java/org/apache/aurora/scheduler/base/ResourceAggregates.java)
   * By CPU:
     * `sla_cpu_small_mtta_ms`
     * `sla_cpu_medium_mtta_ms`
@@ -115,20 +129,21 @@ as well as the internal scheduler bin-packing algorithm efficiency (platform sco
 
 **Units:** milliseconds
 
-The MTTA only considers instances that have already reached ASSIGNED state and ignores those
+MTTA only considers instances that have already reached ASSIGNED state and ignores those
 that are still PENDING. This ensures straggler instances (e.g. with unreasonable resource
 constraints) do not affect metric curves.
 
 ### Median Time To Running (MTTR)
 
-*Average time a job waits for its tasks to reach RUNNING state. This is a comprehensive metric
+*Median time a job waits for its tasks to reach RUNNING state. This is a comprehensive metric
 reflecting on the overall time it takes for the Aurora/Mesos to start executing user content.*
 
 **Collection scope:**
 
 * Per job - `sla_<job_key>_mttr_ms`
 * Per cluster - `sla_cluster_mttr_ms`
-* Per instance size (small, medium, large, x-large, xx-large)
+* Per instance size (small, medium, large, x-large, xx-large). Size are defined in:
+[ResourceAggregates.java](../src/main/java/org/apache/aurora/scheduler/base/ResourceAggregates.java)
   * By CPU:
     * `sla_cpu_small_mttr_ms`
     * `sla_cpu_medium_mttr_ms`
@@ -150,7 +165,7 @@ reflecting on the overall time it takes for the Aurora/Mesos to start executing 
 
 **Units:** milliseconds
 
-The MTTR only considers instances in RUNNING state. This ensures straggler instances (e.g. with
+MTTR only considers instances in RUNNING state. This ensures straggler instances (e.g. with
 unreasonable resource constraints) do not affect metric curves.
 
 ## Limitations
