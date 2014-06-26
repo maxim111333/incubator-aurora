@@ -129,7 +129,8 @@ public class LogStorageTest extends EasyMockTest {
             storageUtil.taskStore,
             storageUtil.lockStore,
             storageUtil.quotaStore,
-            storageUtil.attributeStore);
+            storageUtil.attributeStore,
+            storageUtil.deployStore);
 
     stream = createMock(Stream.class);
     streamMatcher = LogOpMatcher.matcherFor(stream);

@@ -206,6 +206,21 @@ struct JobConfiguration {
                                               // [0, instances).
 }
 
+enum DeployStatus {
+  SUCCEEDED = 0,
+  IN_PROGRESS = 1,
+  FAILED = 2
+}
+
+struct Deploy {
+  1: JobKey key,
+  2: i64 deployId,
+  3: string jobConfig,
+  4: DeployStatus status,
+  5: i64 insertedTimestampMs,
+  6: i64 completedTimestampMs
+}
+
 struct JobStats {
  1: i32 activeTaskCount    // Number of tasks in active state for this job.
  2: i32 finishedTaskCount  // Number of tasks in finished state for this job.
@@ -575,6 +590,8 @@ service AuroraSchedulerManager extends ReadOnlyScheduler {
   // Replaces the template (configuration) for the existing cron job.
   // The cron job template (configuration) must exist for the call to succeed.
   Response replaceCronTemplate(1: JobConfiguration config, 2: Lock lock, 3: SessionKey session)
+
+  Response startJobDeploy(1: JobConfiguration config, 2: Lock lock, 3: SessionKey session)
 }
 
 struct InstanceConfigRewrite {

@@ -13,15 +13,20 @@
  */
 package org.apache.aurora.scheduler.state;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import javax.inject.Singleton;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
 
 import org.apache.aurora.scheduler.MesosTaskFactory;
 import org.apache.aurora.scheduler.MesosTaskFactory.MesosTaskFactoryImpl;
 import org.apache.aurora.scheduler.events.PubsubEventModule;
+import org.apache.aurora.scheduler.state.Deployer.DeployerImpl;
 import org.apache.aurora.scheduler.state.MaintenanceController.MaintenanceControllerImpl;
 import org.apache.aurora.scheduler.state.TaskAssigner.TaskAssignerImpl;
 import org.apache.aurora.scheduler.state.UUIDGenerator.UUIDGeneratorImpl;
@@ -46,6 +51,14 @@ public class StateModule extends AbstractModule {
     bind(UUIDGeneratorImpl.class).in(Singleton.class);
     bind(LockManager.class).to(LockManagerImpl.class);
     bind(LockManagerImpl.class).in(Singleton.class);
+    bind(Deployer.class).to(DeployerImpl.class);
+    bind(DeployerImpl.class).in(Singleton.class);
+
+    bind(ExecutorService.class).toInstance(
+        Executors.newCachedThreadPool(new ThreadFactoryBuilder()
+            .setNameFormat("Deployer-%d")
+            .setDaemon(true)
+            .build()));
 
     bindMaintenanceController(binder());
   }

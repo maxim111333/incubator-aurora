@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.inject.Inject;
 
 import org.apache.aurora.scheduler.storage.AttributeStore;
+import org.apache.aurora.scheduler.storage.DeployStore;
 import org.apache.aurora.scheduler.storage.JobStore;
 import org.apache.aurora.scheduler.storage.LockStore;
 import org.apache.aurora.scheduler.storage.QuotaStore;
@@ -58,7 +59,8 @@ class DbStorage extends AbstractIdleService implements Storage {
   DbStorage(
       final SqlSessionFactory sessionFactory,
       final LockStore.Mutable lockStore,
-      final QuotaStore.Mutable quotaStore) {
+      final QuotaStore.Mutable quotaStore,
+      final DbDeployStore.Mutable deployStore) {
 
     this.sessionFactory = Preconditions.checkNotNull(sessionFactory);
     storeProvider = new MutableStoreProvider() {
@@ -90,6 +92,11 @@ class DbStorage extends AbstractIdleService implements Storage {
       @Override
       public QuotaStore.Mutable getQuotaStore() {
         return quotaStore;
+      }
+
+      @Override
+      public DeployStore.Mutable getDeployStore() {
+        return deployStore;
       }
 
       @Override

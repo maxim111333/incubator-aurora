@@ -104,6 +104,7 @@ import org.apache.aurora.scheduler.cron.SanitizedCronJob;
 import org.apache.aurora.scheduler.quota.QuotaInfo;
 import org.apache.aurora.scheduler.quota.QuotaManager;
 import org.apache.aurora.scheduler.quota.QuotaManager.QuotaException;
+import org.apache.aurora.scheduler.state.Deployer;
 import org.apache.aurora.scheduler.state.LockManager;
 import org.apache.aurora.scheduler.state.LockManager.LockException;
 import org.apache.aurora.scheduler.state.MaintenanceController;
@@ -172,6 +173,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
   private final CronJobManager cronJobManager;
   private final CronPredictor cronPredictor;
   private final QuotaManager quotaManager;
+  private final Deployer deployer;
 
   @Inject
   SchedulerThriftInterface(
@@ -184,7 +186,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       CronJobManager cronJobManager,
       CronPredictor cronPredictor,
       MaintenanceController maintenance,
-      QuotaManager quotaManager) {
+      QuotaManager quotaManager,
+      Deployer deployer) {
 
     this(storage,
         schedulerCore,
@@ -195,7 +198,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
         maintenance,
         cronJobManager,
         cronPredictor,
-        quotaManager);
+        quotaManager,
+        deployer);
   }
 
   @VisibleForTesting
@@ -209,7 +213,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       MaintenanceController maintenance,
       CronJobManager cronJobManager,
       CronPredictor cronPredictor,
-      QuotaManager quotaManager) {
+      QuotaManager quotaManager,
+      Deployer deployer) {
 
     this.storage = checkNotNull(storage);
     this.schedulerCore = checkNotNull(schedulerCore);
@@ -221,6 +226,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
     this.cronJobManager = checkNotNull(cronJobManager);
     this.cronPredictor = checkNotNull(cronPredictor);
     this.quotaManager = checkNotNull(quotaManager);
+    this.deployer = checkNotNull(deployer);
   }
 
   @Override
@@ -253,6 +259,37 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
     } catch (LockException e) {
       addMessage(response, LOCK_ERROR, e.getMessage());
     } catch (TaskDescriptionException | ScheduleException e) {
+      addMessage(response, INVALID_REQUEST, e.getMessage());
+    }
+    return response;
+  }
+
+  @Override
+  public Response startJobDeploy(JobConfiguration mutableJob, Lock mutableLock, SessionKey session) {
+    IJobConfiguration job = IJobConfiguration.build(mutableJob);
+    IJobKey jobKey = JobKeys.assertValid(job.getKey());
+    checkNotNull(session);
+
+    Response response = Util.emptyResponse();
+
+    try {
+      sessionValidator.checkAuthenticated(session, ImmutableSet.of(job.getOwner().getRole()));
+    } catch (AuthFailedException e) {
+      return addMessage(response.setResponseCode(AUTH_FAILED), e.getMessage());
+    }
+
+    try {
+      SanitizedConfiguration sanitized = SanitizedConfiguration.fromUnsanitized(job);
+
+      lockManager.validateIfLocked(
+          ILockKey.build(LockKey.job(jobKey.newBuilder())),
+          Optional.fromNullable(mutableLock).transform(ILock.FROM_BUILDER));
+
+       deployer.startDeploy(sanitized);
+      response.setResponseCode(OK);
+    } catch (LockException e) {
+      addMessage(response, LOCK_ERROR, e.getMessage());
+    } catch (TaskDescriptionException  e) {
       addMessage(response, INVALID_REQUEST, e.getMessage());
     }
     return response;

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.apache.aurora.scheduler.storage.db.DeployMapper">
+  <insert id="merge" useGeneratedKeys="true" keyProperty="id">
+    MERGE INTO deploys (
+      id,
+      job_key_id,
+      job_config,
+      status,
+      inserted_timestamp_ms
+    ) VALUES (
+      #{deployId},
+      (
+        SELECT ID
+        FROM job_keys
+        WHERE role = #{key.role}
+          AND environment = #{key.environment}
+          AND name = #{key.name}
+      ),
+      #{jobConfig},
+      #{status},
+      #{insertedTimestampMs}
+    )
+  </insert>
+
+  <select id="select" resultType="org.apache.aurora.gen.Deploy">
+    SELECT * FROM deploys
+    WHERE id = #{id}
+  </select>
+
+  <select id="selectAll">
+    SELECT * FROM deploys
+  </select>
+
+  <update id="update">
+    UPDATE deploys
+    SET status = #{status},
+        completed_timestamp_ms = #{completedTimestampMs}
+    WHERE id = #{deployId}
+  </update>
+
+</mapper>

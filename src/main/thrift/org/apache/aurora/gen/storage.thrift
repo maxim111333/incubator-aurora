@@ -63,6 +63,10 @@ struct RemoveQuota {
   1: string role
 }
 
+struct SaveDeploy {
+  1: api.Deploy deploy
+}
+
 struct SaveHostAttributes {
   1: api.HostAttributes hostAttributes
 }
@@ -79,6 +83,7 @@ union Op {
   11: RewriteTask rewriteTask
   12: SaveLock saveLock
   13: RemoveLock removeLock
+  14: SaveDeploy saveDeploy
 }
 
 // The current schema version ID.  This should be incremented each time the
@@ -130,6 +135,7 @@ struct Snapshot {
   6: SchedulerMetadata schedulerMetadata
   8: set<QuotaConfiguration> quotaConfigurations
   9: set<api.Lock> locks
+  10: set<api.Deploy> deploys
 }
 
 // A message header that calls out the number of expected FrameChunks to follow to form a complete

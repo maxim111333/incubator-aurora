@@ -96,6 +96,7 @@ import org.apache.aurora.scheduler.cron.CrontabEntry;
 import org.apache.aurora.scheduler.cron.SanitizedCronJob;
 import org.apache.aurora.scheduler.quota.QuotaInfo;
 import org.apache.aurora.scheduler.quota.QuotaManager;
+import org.apache.aurora.scheduler.state.Deployer;
 import org.apache.aurora.scheduler.state.LockManager;
 import org.apache.aurora.scheduler.state.LockManager.LockException;
 import org.apache.aurora.scheduler.state.MaintenanceController;
@@ -182,6 +183,7 @@ public class SchedulerThriftInterfaceTest extends EasyMockTest {
   private CronJobManager cronJobManager;
   private CronPredictor cronPredictor;
   private QuotaManager quotaManager;
+  private Deployer deployer;
 
   @Before
   public void setUp() throws Exception {
@@ -198,6 +200,7 @@ public class SchedulerThriftInterfaceTest extends EasyMockTest {
     cronJobManager = createMock(CronJobManager.class);
     cronPredictor = createMock(CronPredictor.class);
     quotaManager = createMock(QuotaManager.class);
+    deployer = createMock(Deployer.class);
 
     // Use guice and install AuthModule to apply AOP-style auth layer.
     Module testModule = new AbstractModule() {
@@ -216,6 +219,7 @@ public class SchedulerThriftInterfaceTest extends EasyMockTest {
         bind(AuroraAdmin.Iface.class).to(SchedulerThriftInterface.class);
         bind(IServerInfo.class).toInstance(IServerInfo.build(SERVER_INFO));
         bind(CronPredictor.class).toInstance(cronPredictor);
+        bind(Deployer.class).toInstance(deployer);
       }
     };
     Injector injector = Guice.createInjector(testModule, new AopModule());

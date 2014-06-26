@@ -41,7 +41,7 @@ public class LockKeyMapper {
 
   public void insert(LockKey key) {
     if (key.isSetJob()) {
-      jobKeyMapper.insert(checkNotNull(key.getJob()));
+      jobKeyMapper.merge(checkNotNull(key.getJob()));
     } else {
       throw new IllegalArgumentException("Unsupported lock type on LockKey.");
     }

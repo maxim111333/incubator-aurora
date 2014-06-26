@@ -37,6 +37,7 @@ public interface Storage {
     LockStore getLockStore();
     QuotaStore getQuotaStore();
     AttributeStore getAttributeStore();
+    DeployStore getDeployStore();
   }
 
   interface MutableStoreProvider extends StoreProvider {
@@ -61,6 +62,7 @@ public interface Storage {
     LockStore.Mutable getLockStore();
     QuotaStore.Mutable getQuotaStore();
     AttributeStore.Mutable getAttributeStore();
+    DeployStore.Mutable getDeployStore();
   }
 
   /**

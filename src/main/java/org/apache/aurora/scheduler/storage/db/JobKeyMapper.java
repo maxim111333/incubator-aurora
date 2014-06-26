@@ -26,7 +26,7 @@ interface JobKeyMapper {
   /**
    * Inserts a new job key into the database.
    */
-  void insert(JobKey key);
+  void merge(JobKey key);
 
   /**
    * Permanently deletes a job key from the database.

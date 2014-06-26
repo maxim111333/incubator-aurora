@@ -22,6 +22,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.name.Names;
 import com.twitter.common.inject.Bindings;
 
+import org.apache.aurora.scheduler.storage.DeployStore;
 import org.apache.aurora.scheduler.storage.LockStore;
 import org.apache.aurora.scheduler.storage.QuotaStore;
 import org.apache.aurora.scheduler.storage.Storage;
@@ -81,9 +82,12 @@ public class DbModule extends PrivateModule {
 
         bindDataSourceProviderType(PooledDataSourceProvider.class);
         bindTransactionFactoryType(JdbcTransactionFactory.class);
-        addMapperClass(LockMapper.class);
+
+        addMapperClass(DeployMapper.class);
         addMapperClass(JobKeyMapper.class);
+        addMapperClass(LockMapper.class);
         addMapperClass(QuotaMapper.class);
+
         Properties props = new Properties();
         // We have no plans to take advantage of multiple DB environments. This is a required
         // property though, so we use an unnamed environment.
@@ -97,6 +101,7 @@ public class DbModule extends PrivateModule {
         // TODO(davmclau): ensure that mybatis logging is configured correctly.
       }
     });
+    bindStore(DeployStore.Mutable.class, DbDeployStore.class);
     bindStore(LockStore.Mutable.class, DbLockStore.class);
     bindStore(QuotaStore.Mutable.class, DbQuotaStore.class);
 

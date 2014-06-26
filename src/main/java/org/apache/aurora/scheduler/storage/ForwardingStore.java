@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 
 import org.apache.aurora.gen.HostAttributes;
 import org.apache.aurora.scheduler.base.Query;
+import org.apache.aurora.scheduler.storage.entities.IDeploy;
 import org.apache.aurora.scheduler.storage.entities.IJobConfiguration;
 import org.apache.aurora.scheduler.storage.entities.IJobKey;
 import org.apache.aurora.scheduler.storage.entities.ILock;
@@ -42,7 +43,8 @@ public class ForwardingStore implements
     TaskStore,
     LockStore,
     QuotaStore,
-    AttributeStore {
+    AttributeStore,
+    DeployStore {
 
   private final SchedulerStore schedulerStore;
   private final JobStore jobStore;
@@ -50,6 +52,7 @@ public class ForwardingStore implements
   private final LockStore lockStore;
   private final QuotaStore quotaStore;
   private final AttributeStore attributeStore;
+  private final DeployStore deployStore;
 
   /**
    * Creats a new forwarding store that delegates to the providing default stores.
@@ -60,6 +63,7 @@ public class ForwardingStore implements
    * @param lockStore Delegate.
    * @param quotaStore Delegate.
    * @param attributeStore Delegate.
+   * @param deployStore Delegate.
    */
   public ForwardingStore(
       SchedulerStore schedulerStore,
@@ -67,7 +71,8 @@ public class ForwardingStore implements
       TaskStore taskStore,
       LockStore lockStore,
       QuotaStore quotaStore,
-      AttributeStore attributeStore) {
+      AttributeStore attributeStore,
+      DeployStore deployStore) {
 
     this.schedulerStore = checkNotNull(schedulerStore);
     this.jobStore = checkNotNull(jobStore);
@@ -75,6 +80,7 @@ public class ForwardingStore implements
     this.lockStore = checkNotNull(lockStore);
     this.quotaStore = checkNotNull(quotaStore);
     this.attributeStore = checkNotNull(attributeStore);
+    this.deployStore = checkNotNull(deployStore);
   }
 
   @Override
@@ -131,5 +137,15 @@ public class ForwardingStore implements
   @Override
   public Set<HostAttributes> getHostAttributes() {
     return attributeStore.getHostAttributes();
+  }
+
+  @Override
+  public Set<IDeploy> getDeploys() {
+    return deployStore.getDeploys();
+  }
+
+  @Override
+  public IDeploy getDeploy(long deployId) {
+    return deployStore.getDeploy(deployId);
   }
 }

@@ -34,6 +34,7 @@ import org.apache.aurora.gen.storage.RemoveQuota;
 import org.apache.aurora.gen.storage.RemoveTasks;
 import org.apache.aurora.gen.storage.RewriteTask;
 import org.apache.aurora.gen.storage.SaveAcceptedJob;
+import org.apache.aurora.gen.storage.SaveDeploy;
 import org.apache.aurora.gen.storage.SaveFrameworkId;
 import org.apache.aurora.gen.storage.SaveHostAttributes;
 import org.apache.aurora.gen.storage.SaveLock;
@@ -42,6 +43,7 @@ import org.apache.aurora.gen.storage.SaveTasks;
 import org.apache.aurora.scheduler.base.Query;
 import org.apache.aurora.scheduler.base.Tasks;
 import org.apache.aurora.scheduler.storage.AttributeStore;
+import org.apache.aurora.scheduler.storage.DeployStore;
 import org.apache.aurora.scheduler.storage.ForwardingStore;
 import org.apache.aurora.scheduler.storage.JobStore;
 import org.apache.aurora.scheduler.storage.LockStore;
@@ -49,6 +51,7 @@ import org.apache.aurora.scheduler.storage.QuotaStore;
 import org.apache.aurora.scheduler.storage.SchedulerStore;
 import org.apache.aurora.scheduler.storage.Storage.MutableStoreProvider;
 import org.apache.aurora.scheduler.storage.TaskStore;
+import org.apache.aurora.scheduler.storage.entities.IDeploy;
 import org.apache.aurora.scheduler.storage.entities.IJobConfiguration;
 import org.apache.aurora.scheduler.storage.entities.IJobKey;
 import org.apache.aurora.scheduler.storage.entities.ILock;
@@ -73,7 +76,8 @@ class WriteAheadStorage extends ForwardingStore implements
     TaskStore.Mutable,
     LockStore.Mutable,
     QuotaStore.Mutable,
-    AttributeStore.Mutable {
+    AttributeStore.Mutable,
+    DeployStore.Mutable {
 
   private static final Logger LOG = Logger.getLogger(WriteAheadStorage.class.getName());
 
@@ -84,6 +88,7 @@ class WriteAheadStorage extends ForwardingStore implements
   private final LockStore.Mutable lockStore;
   private final QuotaStore.Mutable quotaStore;
   private final AttributeStore.Mutable attributeStore;
+  private final DeployStore.Mutable deployStore;
 
   /**
    * Creates a new write-ahead storage that delegates to the providing default stores.
@@ -103,9 +108,10 @@ class WriteAheadStorage extends ForwardingStore implements
       TaskStore.Mutable taskStore,
       LockStore.Mutable lockStore,
       QuotaStore.Mutable quotaStore,
-      AttributeStore.Mutable attributeStore) {
+      AttributeStore.Mutable attributeStore,
+      DeployStore.Mutable deployStore) {
 
-    super(schedulerStore, jobStore, taskStore, lockStore, quotaStore, attributeStore);
+    super(schedulerStore, jobStore, taskStore, lockStore, quotaStore, attributeStore, deployStore);
 
     this.transactionManager = checkNotNull(transactionManager);
     this.schedulerStore = checkNotNull(schedulerStore);
@@ -114,6 +120,7 @@ class WriteAheadStorage extends ForwardingStore implements
     this.lockStore = checkNotNull(lockStore);
     this.quotaStore = checkNotNull(quotaStore);
     this.attributeStore = checkNotNull(attributeStore);
+    this.deployStore = checkNotNull(deployStore);
   }
 
   private void write(Op op) {
@@ -260,6 +267,14 @@ class WriteAheadStorage extends ForwardingStore implements
   }
 
   @Override
+  public void saveDeploy(IDeploy deploy) {
+    checkNotNull(deploy);
+
+    write(Op.saveDeploy(new SaveDeploy(deploy.newBuilder())));
+    deployStore.saveDeploy(deploy);
+  }
+
+  @Override
   public void deleteAllTasks() {
     throw new UnsupportedOperationException(
         "Unsupported since casual storage users should never be doing this.");
@@ -336,6 +351,11 @@ class WriteAheadStorage extends ForwardingStore implements
 
   @Override
   public TaskStore getTaskStore() {
+    return this;
+  }
+
+  @Override
+  public DeployStore.Mutable getDeployStore() {
     return this;
   }
 }

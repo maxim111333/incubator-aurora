@@ -35,6 +35,7 @@ import org.apache.aurora.gen.SessionKey;
 import org.apache.aurora.scheduler.cron.CronJobManager;
 import org.apache.aurora.scheduler.cron.CronPredictor;
 import org.apache.aurora.scheduler.quota.QuotaManager;
+import org.apache.aurora.scheduler.state.Deployer;
 import org.apache.aurora.scheduler.state.LockManager;
 import org.apache.aurora.scheduler.state.MaintenanceController;
 import org.apache.aurora.scheduler.state.SchedulerCore;
@@ -71,6 +72,7 @@ public class ThriftIT extends EasyMockTest {
   private StorageTestUtil storageTestUtil;
   private SessionContext context;
   private QuotaManager quotaManager;
+  private Deployer deployer;
 
   private final SessionValidator validator = new SessionValidator() {
     @Override
@@ -131,6 +133,7 @@ public class ThriftIT extends EasyMockTest {
   public void setUp() {
     context = createMock(SessionContext.class);
     quotaManager = createMock(QuotaManager.class);
+    deployer = createMock(Deployer.class);
     createThrift(CAPABILITIES);
   }
 
@@ -159,6 +162,7 @@ public class ThriftIT extends EasyMockTest {
             bind(NonVolatileStorage.class).toInstance(storageTestUtil.storage);
             bindMock(StorageBackup.class);
             bind(QuotaManager.class).toInstance(quotaManager);
+            bind(Deployer.class).toInstance(deployer);
             bind(SessionValidator.class).toInstance(validator);
             bind(CapabilityValidator.class).toInstance(new CapabilityValidatorFake(validator));
             bind(IServerInfo.class).toInstance(IServerInfo.build(new ServerInfo()));

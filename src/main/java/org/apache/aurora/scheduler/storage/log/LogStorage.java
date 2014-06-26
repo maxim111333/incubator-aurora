@@ -47,6 +47,7 @@ import org.apache.aurora.scheduler.base.SchedulerException;
 import org.apache.aurora.scheduler.log.Log.Stream.InvalidPositionException;
 import org.apache.aurora.scheduler.log.Log.Stream.StreamAccessException;
 import org.apache.aurora.scheduler.storage.AttributeStore;
+import org.apache.aurora.scheduler.storage.DeployStore;
 import org.apache.aurora.scheduler.storage.DistributedSnapshotStore;
 import org.apache.aurora.scheduler.storage.JobStore;
 import org.apache.aurora.scheduler.storage.LockStore;
@@ -56,6 +57,7 @@ import org.apache.aurora.scheduler.storage.SnapshotStore;
 import org.apache.aurora.scheduler.storage.Storage;
 import org.apache.aurora.scheduler.storage.Storage.NonVolatileStorage;
 import org.apache.aurora.scheduler.storage.TaskStore;
+import org.apache.aurora.scheduler.storage.entities.IDeploy;
 import org.apache.aurora.scheduler.storage.entities.IJobConfiguration;
 import org.apache.aurora.scheduler.storage.entities.IJobKey;
 import org.apache.aurora.scheduler.storage.entities.ILock;
@@ -176,6 +178,7 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
   private final LockStore.Mutable writeBehindLockStore;
   private final QuotaStore.Mutable writeBehindQuotaStore;
   private final AttributeStore.Mutable writeBehindAttributeStore;
+  private final DeployStore.Mutable writeBehindDeployStore;
 
   private StreamManager streamManager;
   private final WriteAheadStorage writeAheadStorage;
@@ -225,7 +228,8 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
              @WriteBehind TaskStore.Mutable taskStore,
              @WriteBehind LockStore.Mutable lockStore,
              @WriteBehind QuotaStore.Mutable quotaStore,
-             @WriteBehind AttributeStore.Mutable attributeStore) {
+             @WriteBehind AttributeStore.Mutable attributeStore,
+             @WriteBehind DeployStore.Mutable deployStore) {
 
     this(logManager,
         new ScheduledExecutorSchedulingService(shutdownRegistry, shutdownGracePeriod),
@@ -237,7 +241,8 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
         taskStore,
         lockStore,
         quotaStore,
-        attributeStore);
+        attributeStore,
+        deployStore);
   }
 
   @VisibleForTesting
@@ -251,7 +256,8 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
              TaskStore.Mutable taskStore,
              LockStore.Mutable lockStore,
              QuotaStore.Mutable quotaStore,
-             AttributeStore.Mutable attributeStore) {
+             AttributeStore.Mutable attributeStore,
+             DeployStore.Mutable deployStore) {
 
     this.logManager = checkNotNull(logManager);
     this.schedulingService = checkNotNull(schedulingService);
@@ -269,6 +275,7 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
     this.writeBehindLockStore = checkNotNull(lockStore);
     this.writeBehindQuotaStore = checkNotNull(quotaStore);
     this.writeBehindAttributeStore = checkNotNull(attributeStore);
+    this.writeBehindDeployStore = checkNotNull(deployStore);
     TransactionManager transactionManager = new TransactionManager() {
       @Override
       public boolean hasActiveTransaction() {
@@ -287,7 +294,8 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
         taskStore,
         lockStore,
         quotaStore,
-        attributeStore);
+        attributeStore,
+        deployStore);
   }
 
   @Override
@@ -437,6 +445,10 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
 
       case REMOVE_LOCK:
         writeBehindLockStore.removeLock(ILockKey.build(op.getRemoveLock().getLockKey()));
+        break;
+
+      case SAVE_DEPLOY:
+        writeBehindDeployStore.saveDeploy(IDeploy.build(op.getSaveDeploy().getDeploy()));
         break;
 
       default:
