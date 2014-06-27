@@ -56,6 +56,7 @@ import org.apache.aurora.gen.ConfigSummary;
 import org.apache.aurora.gen.ConfigSummaryResult;
 import org.apache.aurora.gen.DrainHostsResult;
 import org.apache.aurora.gen.EndMaintenanceResult;
+import org.apache.aurora.gen.GetDeploysResult;
 import org.apache.aurora.gen.GetJobsResult;
 import org.apache.aurora.gen.GetLocksResult;
 import org.apache.aurora.gen.GetQuotaResult;
@@ -118,6 +119,7 @@ import org.apache.aurora.scheduler.storage.backup.Recovery;
 import org.apache.aurora.scheduler.storage.backup.Recovery.RecoveryException;
 import org.apache.aurora.scheduler.storage.backup.StorageBackup;
 import org.apache.aurora.scheduler.storage.entities.IAssignedTask;
+import org.apache.aurora.scheduler.storage.entities.IDeploy;
 import org.apache.aurora.scheduler.storage.entities.IJobConfiguration;
 import org.apache.aurora.scheduler.storage.entities.IJobKey;
 import org.apache.aurora.scheduler.storage.entities.ILock;
@@ -293,6 +295,32 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       addMessage(response, INVALID_REQUEST, e.getMessage());
     }
     return response;
+  }
+
+  @Override
+  public Response getDeploy(final long deployId) {
+    IDeploy deploy = storage.weaklyConsistentRead(new Storage.Work.Quiet<IDeploy>() {
+      @Override
+      public IDeploy apply(Storage.StoreProvider storeProvider) {
+        return storeProvider.getDeployStore().getDeploy(deployId);
+      }
+    });
+
+    return okResponse(Result.getDeploysResult(
+        new GetDeploysResult(ImmutableSet.of(deploy.newBuilder()))));
+  }
+
+  @Override
+  public Response getAllDeploys() {
+    Set<IDeploy> deploys = storage.weaklyConsistentRead(new Storage.Work.Quiet<Set<IDeploy>>() {
+      @Override
+      public Set<IDeploy> apply(Storage.StoreProvider storeProvider) {
+        return storeProvider.getDeployStore().getDeploys();
+      }
+    });
+
+    return okResponse(Result.getDeploysResult(
+        new GetDeploysResult(IDeploy.toBuildersSet(deploys))));
   }
 
   @Override

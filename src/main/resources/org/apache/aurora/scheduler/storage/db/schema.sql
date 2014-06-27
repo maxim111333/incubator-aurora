@@ -47,8 +47,9 @@ CREATE TABLE quotas(
 CREATE TABLE deploys(
  id BIGINT IDENTITY,
  job_key_id INT NOT NULL REFERENCES job_keys(id),
+ deploy_id VARCHAR NOT NULL,
  job_config VARCHAR NOT NULL,
- status INT NOT NULL,
+ status VARCHAR NOT NULL,
  inserted_timestamp_ms BIGINT NOT NULL,
  completed_timestamp_ms BIGINT
 );

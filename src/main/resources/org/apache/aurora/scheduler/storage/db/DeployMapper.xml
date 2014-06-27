@@ -3,42 +3,43 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.apache.aurora.scheduler.storage.db.DeployMapper">
-  <insert id="merge" useGeneratedKeys="true" keyProperty="id">
+  <insert id="merge" >
     MERGE INTO deploys (
-      id,
       job_key_id,
+      deploy_id,
       job_config,
       status,
-      inserted_timestamp_ms
-    ) VALUES (
-      #{deployId},
+      inserted_timestamp_ms,
+      completed_timestamp_ms,
+    ) KEY(deploy_id) VALUES (
       (
-        SELECT ID
+        SELECT id
         FROM job_keys
         WHERE role = #{key.role}
           AND environment = #{key.environment}
           AND name = #{key.name}
       ),
+      #{deployId},
       #{jobConfig},
-      #{status},
-      #{insertedTimestampMs}
+      #{status.name},
+      #{insertedTimestampMs},
+      #{completedTimestampMs}
     )
   </insert>
+
+  <resultMap id="deployResultMap" type="org.apache.aurora.gen.Deploy">
+    <id column="id" />
+    <association property="key" javaType="org.apache.aurora.gen.JobKey" />
+  </resultMap>
 
   <select id="select" resultType="org.apache.aurora.gen.Deploy">
     SELECT * FROM deploys
     WHERE id = #{id}
   </select>
 
-  <select id="selectAll">
+  <select id="selectAll" resultMap="deployResultMap">
     SELECT * FROM deploys
+    JOIN job_keys AS key ON job_key_id = key.id
   </select>
-
-  <update id="update">
-    UPDATE deploys
-    SET status = #{status},
-        completed_timestamp_ms = #{completedTimestampMs}
-    WHERE id = #{deployId}
-  </update>
 
 </mapper>

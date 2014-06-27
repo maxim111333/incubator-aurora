@@ -214,7 +214,7 @@ enum DeployStatus {
 
 struct Deploy {
   1: JobKey key,
-  2: i64 deployId,
+  2: string deployId,
   3: string jobConfig,
   4: DeployStatus status,
   5: i64 insertedTimestampMs,
@@ -466,6 +466,10 @@ struct ConfigSummaryResult {
   1: ConfigSummary summary
 }
 
+struct GetDeploysResult {
+  1: set<Deploy> deploys
+}
+
 // meta-data about the thrift server that is wrapped around every thrift response
 struct ServerInfo {
   1: string clusterName
@@ -490,7 +494,7 @@ union Result {
   18: JobSummaryResult jobSummaryResult
   19: GetLocksResult getLocksResult
   20: ConfigSummaryResult configSummaryResult
-
+  21: GetDeploysResult getDeploysResult
 }
 
 struct ResponseDetail {
@@ -544,6 +548,10 @@ service ReadOnlyScheduler {
 
   // Returns all stored context specific resource/operation locks.
   Response getLocks()
+
+  Response getDeploy(1: i64 deployId)
+
+  Response getAllDeploys()
 }
 
 // Due to assumptions in the client all authenticated RPCs must have a SessionKey as their

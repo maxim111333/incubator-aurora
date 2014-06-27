@@ -25,12 +25,19 @@ public interface Deployer {
     private final Storage storage;
     private final ExecutorService executor;
     private final Clock clock;
+    private final UUIDGenerator uuidGenerator;
 
     @Inject
-    DeployerImpl(Storage storage, ExecutorService executor, Clock clock) {
+    DeployerImpl(
+        Storage storage,
+        ExecutorService executor,
+        Clock clock,
+        UUIDGenerator uuidGenerator) {
+
       this.storage = storage;
       this.executor = executor;
       this.clock = clock;
+      this.uuidGenerator = uuidGenerator;
     }
 
     @Override
@@ -41,11 +48,11 @@ public interface Deployer {
       executor.submit(new Runnable() {
         @Override
         public void run() {
-          //int result = invokeAuroraClient(sanitizedConfig.getJobConfig().getKey());
+          int result = invokeAuroraClient(sanitizedConfig.getJobConfig().getKey());
 
-//          saveDeploy(deploy
-//              .setCompletedTimestampMs(clock.nowMillis())
-//              .setStatus(result == 0 ? DeployStatus.SUCCEEDED : DeployStatus.FAILED));
+          saveDeploy(deploy
+              .setCompletedTimestampMs(clock.nowMillis())
+              .setStatus(result == 0 ? DeployStatus.SUCCEEDED : DeployStatus.FAILED));
         }
       });
     }
@@ -61,6 +68,7 @@ public interface Deployer {
 
     private Deploy createDeploy(final SanitizedConfiguration sanitizedConfig) {
       return new Deploy()
+          .setDeployId(uuidGenerator.createNew().toString())
           .setKey(sanitizedConfig.getJobConfig().getKey().newBuilder())
           .setJobConfig(sanitizedConfig.getJobConfig().newBuilder().toString())
           .setStatus(DeployStatus.IN_PROGRESS)
@@ -74,14 +82,14 @@ public interface Deployer {
           "release",
           JobKeys.canonicalString(jobKey));
 
-      try {
-        Process process = builder.start();
-        return process.waitFor();
-      } catch (IOException e) {
-        e.printStackTrace();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+//      try {
+//        Process process = builder.start();
+//        return process.waitFor();
+//      } catch (IOException e) {
+//        e.printStackTrace();
+//      } catch (InterruptedException e) {
+//        e.printStackTrace();
+//      }
 
       return -1;
     }

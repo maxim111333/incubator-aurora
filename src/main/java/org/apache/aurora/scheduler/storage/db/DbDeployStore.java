@@ -21,15 +21,7 @@ class DbDeployStore implements DeployStore.Mutable {
   @Override
   public void saveDeploy(IDeploy deploy) {
     jobKeyMapper.merge(deploy.getKey().newBuilder());
-    long id = deployMapper.merge(
-        deploy.getDeployId(),
-        deploy.getKey().newBuilder(),
-        deploy.getJobConfig(),
-        deploy.getStatus().getValue(),
-        deploy.getInsertedTimestampMs(),
-        deploy.getCompletedTimestampMs());
-
-    System.out.println("*************** INSERTED ID:" + id);
+    deployMapper.merge(deploy.newBuilder());
   }
 
   @Override
