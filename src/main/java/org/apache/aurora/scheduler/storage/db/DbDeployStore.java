@@ -30,7 +30,7 @@ class DbDeployStore implements DeployStore.Mutable {
   }
 
   @Override
-  public IDeploy getDeploy(long deployId) {
+  public IDeploy getDeploy(String deployId) {
     return IDeploy.build(deployMapper.select(deployId));
   }
 }

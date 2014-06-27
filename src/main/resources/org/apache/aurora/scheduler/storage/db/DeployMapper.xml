@@ -32,9 +32,10 @@
     <association property="key" javaType="org.apache.aurora.gen.JobKey" />
   </resultMap>
 
-  <select id="select" resultType="org.apache.aurora.gen.Deploy">
+  <select id="select" resultMap="deployResultMap">
     SELECT * FROM deploys
-    WHERE id = #{id}
+    JOIN job_keys As key ON job_key_id = key.id
+    WHERE deploy_id = #{id}
   </select>
 
   <select id="selectAll" resultMap="deployResultMap">

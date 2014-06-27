@@ -145,7 +145,7 @@ public class ForwardingStore implements
   }
 
   @Override
-  public IDeploy getDeploy(long deployId) {
+  public IDeploy getDeploy(String deployId) {
     return deployStore.getDeploy(deployId);
   }
 }

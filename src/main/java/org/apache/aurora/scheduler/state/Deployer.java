@@ -1,7 +1,11 @@
 package org.apache.aurora.scheduler.state;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
+import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
@@ -14,13 +18,26 @@ import org.apache.aurora.scheduler.storage.Storage;
 import org.apache.aurora.scheduler.storage.entities.IDeploy;
 import org.apache.aurora.scheduler.storage.entities.IJobKey;
 
+import com.twitter.common.args.Arg;
+import com.twitter.common.args.CmdLine;
 import com.twitter.common.util.Clock;
 
 public interface Deployer {
 
-  void startDeploy(SanitizedConfiguration jobConfiguration);
+  String startDeploy(SanitizedConfiguration jobConfiguration);
 
   class DeployerImpl implements Deployer {
+
+    @CmdLine(name = "aurora_client_path", help = "Aurora client path relative to home directory.")
+    public static final Arg<String> AURORA_PATH = Arg.create("/aurora");
+
+    @CmdLine(name = "tunnel_host", help = "Tunnel host for the aurora client.")
+    public static final Arg<String> TUNNEL_HOST = Arg.create(null);
+
+    @CmdLine(name = "deploy_cluster", help = "Name of the cluster to deploy.")
+    public static final Arg<String> CLUSTER_NAME = Arg.create("devcluster");
+
+    private static final Logger LOG = Logger.getLogger(DeployerImpl.class.getName());
 
     private final Storage storage;
     private final ExecutorService executor;
@@ -41,7 +58,7 @@ public interface Deployer {
     }
 
     @Override
-    public void startDeploy(final SanitizedConfiguration sanitizedConfig) {
+    public String startDeploy(final SanitizedConfiguration sanitizedConfig) {
       final Deploy deploy = createDeploy(sanitizedConfig);
       saveDeploy(deploy);
 
@@ -55,6 +72,8 @@ public interface Deployer {
               .setStatus(result == 0 ? DeployStatus.SUCCEEDED : DeployStatus.FAILED));
         }
       });
+
+      return deploy.deployId;
     }
 
     private void saveDeploy(final Deploy deploy) {
@@ -77,21 +96,26 @@ public interface Deployer {
 
     private int invokeAuroraClient(IJobKey jobKey) {
       ProcessBuilder builder = new ProcessBuilder(
-          "aurora",
+          System.getenv("HOME") + AURORA_PATH.get(),
           "deployment",
+          TUNNEL_HOST.get() == null ? "" : "--tunnel_host=" + TUNNEL_HOST.get(),
           "release",
-          JobKeys.canonicalString(jobKey));
+          CLUSTER_NAME.get() + "/" + JobKeys.canonicalString(jobKey)).redirectErrorStream(true);
 
-//      try {
-//        Process process = builder.start();
-//        return process.waitFor();
-//      } catch (IOException e) {
-//        e.printStackTrace();
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
+      try {
+        Process process = builder.start();
 
-      return -1;
+        BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        while ((line = br.readLine()) != null) {
+          LOG.info("*********: " + line);
+        }
+
+        return process.waitFor();
+      } catch (IOException | InterruptedException e) {
+        LOG.severe("Error while running Deployer: " + e);
+        return -1;
+      }
     }
   }
 }

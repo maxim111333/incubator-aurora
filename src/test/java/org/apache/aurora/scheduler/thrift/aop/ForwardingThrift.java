@@ -266,7 +266,7 @@ abstract class ForwardingThrift implements AuroraAdmin.Iface {
   }
 
   @Override
-  public Response getDeploy(long deployId) throws TException {
+  public Response getDeploy(String deployId) throws TException {
     return delegate.getDeploy(deployId);
   }
 

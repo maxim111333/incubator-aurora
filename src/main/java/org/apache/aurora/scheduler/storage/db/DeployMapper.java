@@ -11,7 +11,7 @@ public interface DeployMapper {
   void merge(Deploy deploy);
 
   @Nullable
-  Deploy select(long deployId);
+  Deploy select(String deployId);
 
   List<Deploy> selectAll();
 }

@@ -56,6 +56,7 @@ import org.apache.aurora.gen.ConfigSummary;
 import org.apache.aurora.gen.ConfigSummaryResult;
 import org.apache.aurora.gen.DrainHostsResult;
 import org.apache.aurora.gen.EndMaintenanceResult;
+import org.apache.aurora.gen.GetDeployResult;
 import org.apache.aurora.gen.GetDeploysResult;
 import org.apache.aurora.gen.GetJobsResult;
 import org.apache.aurora.gen.GetLocksResult;
@@ -86,6 +87,7 @@ import org.apache.aurora.gen.ScheduleStatus;
 import org.apache.aurora.gen.ScheduleStatusResult;
 import org.apache.aurora.gen.ScheduledTask;
 import org.apache.aurora.gen.SessionKey;
+import org.apache.aurora.gen.StartDeployResult;
 import org.apache.aurora.gen.StartMaintenanceResult;
 import org.apache.aurora.gen.TaskConfig;
 import org.apache.aurora.gen.TaskQuery;
@@ -287,8 +289,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
           ILockKey.build(LockKey.job(jobKey.newBuilder())),
           Optional.fromNullable(mutableLock).transform(ILock.FROM_BUILDER));
 
-       deployer.startDeploy(sanitized);
-      response.setResponseCode(OK);
+      response.setResponseCode(OK).setResult(
+          Result.startDeployResult(new StartDeployResult(deployer.startDeploy(sanitized))));
     } catch (LockException e) {
       addMessage(response, LOCK_ERROR, e.getMessage());
     } catch (TaskDescriptionException  e) {
@@ -298,7 +300,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
   }
 
   @Override
-  public Response getDeploy(final long deployId) {
+  public Response getDeploy(final String deployId) {
     IDeploy deploy = storage.weaklyConsistentRead(new Storage.Work.Quiet<IDeploy>() {
       @Override
       public IDeploy apply(Storage.StoreProvider storeProvider) {
@@ -306,8 +308,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       }
     });
 
-    return okResponse(Result.getDeploysResult(
-        new GetDeploysResult(ImmutableSet.of(deploy.newBuilder()))));
+    return okResponse(Result.getDeployResult(new GetDeployResult(deploy.newBuilder())));
   }
 
   @Override

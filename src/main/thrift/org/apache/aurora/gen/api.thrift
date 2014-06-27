@@ -466,6 +466,14 @@ struct ConfigSummaryResult {
   1: ConfigSummary summary
 }
 
+struct StartDeployResult {
+  1: string deployId
+}
+
+struct GetDeployResult {
+  1: Deploy deploy
+}
+
 struct GetDeploysResult {
   1: set<Deploy> deploys
 }
@@ -495,6 +503,8 @@ union Result {
   19: GetLocksResult getLocksResult
   20: ConfigSummaryResult configSummaryResult
   21: GetDeploysResult getDeploysResult
+  22: GetDeployResult getDeployResult
+  23: StartDeployResult startDeployResult
 }
 
 struct ResponseDetail {
@@ -549,7 +559,7 @@ service ReadOnlyScheduler {
   // Returns all stored context specific resource/operation locks.
   Response getLocks()
 
-  Response getDeploy(1: i64 deployId)
+  Response getDeploy(1: string deployId)
 
   Response getAllDeploys()
 }
