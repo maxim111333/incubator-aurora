@@ -92,10 +92,7 @@ responds with OK
 * External service stops heartbeats.
 
 ### 7. Unknown update ID
-* User posts a coordinated job update request
-* Scheduler starts heartbeat countdown using specified heartbeat rate
-* Update enters terminal state due to failure or external user action (e.g. `abortJobUpdate`)
-* A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler responds with STOP
+* A `heartbeatJobUpdate` RPC is called with the unknown update ID. Scheduler responds with ERROR
 * External service stops heartbeats.
 
 ## Limitations
