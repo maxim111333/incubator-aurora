@@ -2,9 +2,9 @@ Job Update Coordination
 --------------
 
 ## Overview
-This feature builds on top of the scheduler job update support implemented recently in
-[AURORA-610](https://issues.apache.org/jira/browse/AURORA-610) and is introduced by
-[AURORA-690](https://issues.apache.org/jira/browse/AURORA-690). To reiterate: some Aurora services
+This feature is introduced by [AURORA-690](https://issues.apache.org/jira/browse/AURORA-690) and
+builds on top of the scheduler job update support implemented recently in
+[AURORA-610](https://issues.apache.org/jira/browse/AURORA-610). To reiterate: some Aurora services
 may benefit from having more control over the server updater process by explicitly acknowledging
 the job update progress. This may be helpful for mission-critical service updates where explicit
 job health monitoring is required during the entire job update lifecycle.
