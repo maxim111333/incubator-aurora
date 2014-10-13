@@ -64,7 +64,7 @@ starts countdown using specified heartbeat rate and responds with OK
 
 ### 3. Scheduler failover while update is in progress
 * User posts a coordinated job update request
-* Scheduler starts heartbeat countdown using specified heartbeat rate
+* Scheduler creates a paused job update
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resumes update,
 starts countdown using specified heartbeat rate and responds with OK
 * Scheduler restarts and automatically moves coordinated update into paused state
