@@ -56,15 +56,23 @@ responds with OK
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
 responds with STOP. External service stops heartbeats.
 
-### 2. Update paused due to health problems
+### 2. Update paused by user or external service
 * User posts a coordinated job update request
 * Scheduler creates a job update and waits for a heartbeat to start acting on it
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler unblocks update,
 starts countdown using specified heartbeat rate and responds with OK
-* External service detects service health problems and calls `pauseJobUpdate`
-* Scheduler moves update into paused state.
+* External service detects service health problems and calls `pauseJobUpdate`. Alternatively, user
+calls `pauseJobUpdate`
+* Scheduler moves update into paused state
+* In case a `heartbeatJobUpdate` RPC is called with the matching update ID, scheduler responds with
+PAUSED. External service has a choice to either continue or stop heartbeats.
 
-### 3. Missed heartbeat (network partition)
+### 3. Update resumed by user or external service
+* External service decides to resume job update after a health problem is resolved and calls
+`resumeJobUpdate`. Alternatively, user calls `resumeJobUpdate`
+* Scheduler resumes the update and waits for a heartbeat to start acting on it.
+
+### 4. Missed heartbeat (network partition)
 * User posts a coordinated job update request
 * Scheduler creates a job update and waits for a heartbeat to start acting on it
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler unblocks update,
@@ -76,7 +84,7 @@ resets countdown using specified heartbeat rate and responds with OK
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
 responds with STOP. External service stops heartbeats.
 
-### 4. Scheduler failover while update is in progress
+### 5. Scheduler failover while update is in progress
 * User posts a coordinated job update request
 * Scheduler creates a job update and waits for a heartbeat to start acting on it
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler unblocks update,
@@ -87,15 +95,6 @@ resets countdown and responds with OK
 * Scheduler finishes the update
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
 responds with STOP. External service stops heartbeats.
-
-### 5. Update paused by user
-* User posts a coordinated job update request
-* Scheduler creates a job update and waits for a heartbeat to start acting on it
-* A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler unblocks update,
-starts countdown using specified heartbeat rate and responds with OK
-* Update is paused by user
-* A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler responds with
-PAUSED. External service has a choice to either continue or stop heartbeats.
 
 ### 6. Update is not active (FAILED/ERROR/ABORTED)
 * User posts a coordinated job update request
