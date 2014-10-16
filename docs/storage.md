@@ -1,6 +1,13 @@
 Aurora Scheduler Storage
 --------------
 
+- [Overview](#overview)
+- [ Reads, writes, modifications...](#reads,-writes,-modifications...)
+  - [Read lifecycle](#read-lifecycle)
+  - [Write lifecycle](#write-lifecycle)
+  - [Atomicity and Isolation](#atomicity-and-isolation)
+- [Population on restart](#population-on-restart)
+
 ## Overview
 
 Aurora scheduler maintains a significant amount of data that need to be persisted to survive
