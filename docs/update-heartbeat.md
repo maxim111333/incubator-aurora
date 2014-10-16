@@ -32,7 +32,7 @@ Add into `JobUpdateSettings`:
   * to make progress. If no heartbeats received within specified interval the update will block
   * its progress and will get unblocked by a new heartbeatJobUpdate call.
   */
-  9: i32 pauseIfNoHeartbeatsAfterMs
+  9: i32 blockIfNoHeartbeatsAfterMs
 ```
 
 Expose a new `heartbeatJobUpdate` RPC:
@@ -54,7 +54,7 @@ starts countdown using specified heartbeat rate and responds with OK
 responds with OK
 * Scheduler finishes the update
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
-responds with STOP. External service stops heartbeats.
+responds with FINISHED. External service stops heartbeats.
 
 ### 2. Update paused by user or external service
 * User posts a coordinated job update request
@@ -82,7 +82,7 @@ starts countdown using specified heartbeat rate and responds with OK
 resets countdown using specified heartbeat rate and responds with OK
 * Scheduler finishes the update
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
-responds with STOP. External service stops heartbeats.
+responds with FINISHED. External service stops heartbeats.
 
 ### 5. Scheduler failover while update is in progress
 * User posts a coordinated job update request
@@ -94,7 +94,7 @@ starts countdown using specified heartbeat rate and responds with OK
 resets countdown and responds with OK
 * Scheduler finishes the update
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler resets countdown and
-responds with STOP. External service stops heartbeats.
+responds with FINISHED. External service stops heartbeats.
 
 ### 6. Update is not active (FAILED/ERROR/ABORTED)
 * User posts a coordinated job update request
@@ -102,9 +102,10 @@ responds with STOP. External service stops heartbeats.
 * A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler unblocks update,
 starts countdown using specified heartbeat rate and responds with OK
 * Update enters terminal state due to failure or external user action (e.g. `abortJobUpdate`)
-* A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler responds with STOP
+* A `heartbeatJobUpdate` RPC is called with the matching update ID. Scheduler responds with FINISHED
 * External service stops heartbeats.
 
 ### 7. Unknown update ID
-* A `heartbeatJobUpdate` RPC is called with the unknown update ID. Scheduler responds with ERROR
+* A `heartbeatJobUpdate` RPC is called with the unknown update ID. Scheduler responds with
+INVALID_REQUEST response code.
 * External service stops heartbeats.
