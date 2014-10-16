@@ -2,7 +2,7 @@ Aurora Scheduler Storage
 --------------
 
 - [Overview](#overview)
-- [ Reads, writes, modifications...](#reads,-writes,-modifications...)
+- [ Reads, writes, modifications...](#reads-writes-modifications...)
   - [Read lifecycle](#read-lifecycle)
   - [Write lifecycle](#write-lifecycle)
   - [Atomicity and Isolation](#atomicity-and-isolation)
