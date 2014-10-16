@@ -38,7 +38,7 @@ Add into `JobUpdateSettings`:
 Expose a new `heartbeatJobUpdate` RPC:
 ```
  /**
-  * Allows progress of the job update in case pauseIfNoHeartbeatsAfterMs is specified in
+  * Allows progress of the job update in case blockIfNoHeartbeatsAfterMs is specified in
   * JobUpdateSettings. Resumes progress if the update was previously blocked.
   */
   Response heartbeatJobUpdate(1: string updateId, 2: SessionKey session)
