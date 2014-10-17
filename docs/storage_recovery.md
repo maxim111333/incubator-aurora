@@ -40,11 +40,12 @@ proceeding with restore. The checklist below helps identifying the course of act
 * Scheduler keeps failing over periodically with a change in leadership
 * Scheduler logs show unusual replicated log messages similar to the this:
 
-    I0313 23:14:39.313841 31780 replica.cpp:633] Replica in RECOVERING status received a broadcasted recover request
-    I0313 23:14:39.313902 31782 recover.cpp:220] Received a recover response from a replica in RECOVERING status
-    I0313 23:14:39.314538 31780 recover.cpp:220] Received a recover response from a replica in EMPTY status
-    I0313 23:14:39.314671 31778 recover.cpp:220] Received a recover response from a replica in VOTING status
-
+<pre>
+I0313 23:14:39.313841 31780 replica.cpp:633] Replica in RECOVERING status received a broadcasted recover request
+I0313 23:14:39.313902 31782 recover.cpp:220] Received a recover response from a replica in RECOVERING status
+I0313 23:14:39.314538 31780 recover.cpp:220] Received a recover response from a replica in EMPTY status
+I0313 23:14:39.314671 31778 recover.cpp:220] Received a recover response from a replica in VOTING status
+</pre>
 * The scheduler log file defined by `-native_log_file_path` is missing or known to be corrupted
 on any of the replicas
 
