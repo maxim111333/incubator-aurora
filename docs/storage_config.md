@@ -1,8 +1,8 @@
 # Storage Configuration And Maintenance
 
 - [Mesos log configuration flags](#mesos-log-configuration-flags)
-  - [-native_log_quorum_size](#\-native-log-quorum-size)
-  - [-native_log_file_path](#\-native-log-file-path)
+  - [-native_log_quorum_size](#\-native_log_quorum_size)
+  - [-native_log_file_path](#-native_log_file_path)
   - [-native_log_zk_group_path](#\-native-log-zk-group-path)
 - [Backup configuration flags](#backup-configuration-flags)
   - [-backup_interval](#\-backup-interval)
