@@ -9,6 +9,7 @@
   - [-backup_dir](#-backup_dir)
   - [-max_saved_backups](#-max_saved_backups)
 - [Restoring from backup](#restoring-from-backup)
+
 For a high level overview of the Aurora storage architecture refer to [this document](storage.md).
 
 ## Mesos log configuration flags
