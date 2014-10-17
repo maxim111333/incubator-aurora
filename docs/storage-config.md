@@ -20,7 +20,7 @@
 ## Overview
 
 This document is summarizing Aurora storage configuration and maintenance details and is
-intended for use by anyone deploying Aurora in a datacenter.
+intended for use by anyone deploying and/or maintaining Aurora in a datacenter.
 
 For a high level overview of the Aurora storage architecture refer to [this document](storage.md).
 
