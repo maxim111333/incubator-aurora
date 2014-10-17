@@ -1,13 +1,13 @@
 # Storage Configuration And Maintenance
 
 - [Mesos log configuration flags](#mesos-log-configuration-flags)
-  - [-native_log_quorum_size](#\-native_log_quorum_size)
+  - [-native_log_quorum_size](#-native_log_quorum_size)
   - [-native_log_file_path](#-native_log_file_path)
-  - [-native_log_zk_group_path](#\-native-log-zk-group-path)
+  - [-native_log_zk_group_path](#-native_log_zk_group_path)
 - [Backup configuration flags](#backup-configuration-flags)
-  - [-backup_interval](#\-backup-interval)
-  - [-backup_dir](#\-backup-dir)
-  - [-max_saved_backups](#\-max-saved-backups)
+  - [-backup_interval](#-backup_interval)
+  - [-backup_dir](#-backup_dir)
+  - [-max_saved_backups](#-max_saved_backups)
 - [Restoring from backup](#restoring-from-backup)
 For a high level overview of the Aurora storage architecture refer to [this document](storage.md).
 
