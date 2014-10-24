@@ -83,6 +83,9 @@ should be set to `2`, and in a cluster of 5 it should be set to `3`.
 
 *Incorrectly setting this flag will cause data corruption to occur!*
 
+See [this document](storage-config.md#scheduler-storage-configuration-flags) for more replicated
+log and storage configuration options.
+
 ## Initializing the Replicated Log
 Before you start Aurora you will also need to initialize the log on the first master.
 
