@@ -6,7 +6,7 @@ client/server RPC protocol as well as for internal data storage. While Thrift is
 correctly handle additions and renames of the existing members, field removals must be done
 carefully to ensure backwards compatibility and provide predictable deprecation cycle. This
 document describes general guidelines for making thrift schema changes to the existing fields in
-[api.thrift](../src/main/thrift/org/apache/aurora/gen/api.thrift).
+[api.thrift](api/src/main/thrift/org/apache/aurora/gen/api.thrift).
 
 ## Checklist
 Every existing thrift schema modification is unique in its requirements and must be analyzed
@@ -24,7 +24,7 @@ must be followed:
 Change is applied in a way that does not break scheduler/client with this version to
 communicate with scheduler/client from vCurrent-1.
 * Add a field double to the old one and implement a dual read/write anywhere it's used
-* Check [storage.thrift](../src/main/thrift/org/apache/aurora/gen/storage.thrift) to see if the
+* Check [storage.thrift](api/src/main/thrift/org/apache/aurora/gen/storage.thrift) to see if the
 affected struct is stored in Aurora scheduler storage. If so, you most likely need to backfill
 existing data to ensure both fields are populated eagerly on startup
 See [StorageBackfill.java](../src/main/java/org/apache/aurora/scheduler/storage/StorageBackfill.java)
