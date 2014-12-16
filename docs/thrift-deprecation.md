@@ -12,9 +12,9 @@ document describes general guidelines for making thrift schema changes to the ex
 Every existing thrift schema modification is unique in its requirements and must be analyzed
 carefully to identify its scope and expected consequences. The following checklist may help in that
 analysis:
-* Is this a new field/struct? If yes, go ahead.
-* Is this a pure field/struct rename without any type/structure change? If yes, go ahead and rename.
-* Anything else, read further to make sure your change is properly planned.
+* Is this a new field/struct? If yes, go ahead
+* Is this a pure field/struct rename without any type/structure change? If yes, go ahead and rename
+* Anything else, read further to make sure your change is properly planned
 
 ## Deprecation cycle
 Any time a breaking change (e.g.: field replacement or removal) is required, the following cycle
@@ -29,12 +29,12 @@ affected struct is stored in Aurora scheduler storage. If so, you most likely ne
 existing data to ensure both fields are populated eagerly on startup
 See [StorageBackfill.java](../src/main/java/org/apache/aurora/scheduler/storage/StorageBackfill.java)
 * Add a deprecation jira ticket into the vCurrent+1 release candidate
-* Add a TODO next to the deprecated field with that jira ticket
+* Add a TODO for the deprecated field mentioning the jira ticket
 
-### vCurrent+1:
+### vCurrent+1
 Finalize the change by removing the deprecated fields from the thrift schema.
 * Drop any dual read/write routines added in the previous version
-* Remove the deprecated thrift field.
+* Remove the deprecated thrift field
 
 ## Testing
 It's always advisable to test your changes in the local vagrant environment to build more
