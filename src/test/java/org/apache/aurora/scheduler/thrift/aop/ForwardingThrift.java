@@ -268,6 +268,13 @@ abstract class ForwardingThrift implements AuroraAdmin.Iface {
   }
 
   @Override
+  public Response autoScaleJob(JobKey jobKey, double monitoredMetric, SessionKey session)
+      throws TException {
+
+    return delegate.autoScaleJob(jobKey, monitoredMetric, session);
+  }
+
+  @Override
   public Response pauseJobUpdate(JobKey jobKey, SessionKey session) throws TException {
     return delegate.pauseJobUpdate(jobKey, session);
   }

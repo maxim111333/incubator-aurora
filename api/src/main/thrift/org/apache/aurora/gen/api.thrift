@@ -238,6 +238,80 @@ enum CronCollisionPolicy {
   RUN_OVERLAP   = 2
 }
 
+/** Closed range of integers. */
+struct Range {
+  1: i32 first
+  2: i32 last
+}
+
+/** Job update thresholds and limits. */
+struct JobUpdateSettings {
+  /** Max number of instances being updated at any given moment. */
+  1: i32 updateGroupSize
+
+  /** Max number of instance failures to tolerate before marking instance as FAILED. */
+  2: i32 maxPerInstanceFailures
+
+  /** Max number of FAILED instances to tolerate before terminating the update. */
+  3: i32 maxFailedInstances
+
+  /** Max time to wait until an instance reaches RUNNING state. */
+  4: i32 maxWaitToInstanceRunningMs
+
+  /** Min time to watch a RUNNING instance. */
+  5: i32 minWaitInInstanceRunningMs
+
+  /** If true, enables failed update rollback. */
+  6: bool rollbackOnFailure
+
+  /** Instance IDs to act on. All instances will be affected if this is not set. */
+  7: set<Range> updateOnlyTheseInstances
+
+  /**
+   * If true, use updateGroupSize as strict batching boundaries, and avoid proceeding to another
+   * batch until the preceding batch finishes updating.
+   */
+  8: bool waitForBatchCompletion
+
+ /**
+  * If set, requires external calls to pulseJobUpdate RPC within the specified rate for the
+  * update to make progress. If no pulses received within specified interval the update will
+  * block. A blocked update is unable to continue but retains its current status. It may only get
+  * unblocked by a fresh pulseJobUpdate call.
+  */
+  9: i32 blockIfNoPulsesAfterMs
+}
+
+struct JobAutoScaleConfig {
+  /** Target utilization metric (e.g. CPU, network, RAM, etc.) to be maintained */
+  1: double targetUtilizationMetric
+
+  /** Target tolerance percent */
+  2: double tolerancePercent
+
+  /**
+   * Normally, the inverse proportional dependency is used where instances are added in
+   * order to move the metric needle down. If addInstancesToIncreaseUtilization is set the direct
+   * proportion is used, i.e. instances are added in order to move the metric needle up.
+   */
+  3: bool addInstancesToIncreaseUtilization
+
+  /** Min num instances allowed */
+  4: i32 minTotalInstances
+
+  /** Max num instances allowed */
+  5: i32 maxTotalInstances
+
+  /** Max instances to add within a single corrective action */
+  6: i32 maxInstanceIncrement
+
+  /** Max instances to remove within a single corrective action */
+  7: i32 maxInstanceDecrement
+
+  /** Update settings to apply when adding/removing instances */
+  8: JobUpdateSettings updateSettings
+}
+
 /**
  * Description of an Aurora job. One task will be scheduled for each instance within the job.
  */
@@ -263,6 +337,8 @@ struct JobConfiguration {
    * [0, instances).
    */
   8: i32 instanceCount
+
+  10: JobAutoScaleConfig autoScaleConfig
 }
 
 struct JobStats {
@@ -288,12 +364,6 @@ struct AddInstancesConfig {
   1: JobKey key
   2: TaskConfig taskConfig
   3: set<i32> instanceIds
-}
-
-/** Closed range of integers. */
-struct Range {
-  1: i32 first
-  2: i32 last
 }
 
 struct ConfigGroup {
@@ -604,44 +674,6 @@ enum JobUpdatePulseStatus {
    * Update has reached terminal state.
    */
   FINISHED = 3
-}
-
-/** Job update thresholds and limits. */
-struct JobUpdateSettings {
-  /** Max number of instances being updated at any given moment. */
-  1: i32 updateGroupSize
-
-  /** Max number of instance failures to tolerate before marking instance as FAILED. */
-  2: i32 maxPerInstanceFailures
-
-  /** Max number of FAILED instances to tolerate before terminating the update. */
-  3: i32 maxFailedInstances
-
-  /** Max time to wait until an instance reaches RUNNING state. */
-  4: i32 maxWaitToInstanceRunningMs
-
-  /** Min time to watch a RUNNING instance. */
-  5: i32 minWaitInInstanceRunningMs
-
-  /** If true, enables failed update rollback. */
-  6: bool rollbackOnFailure
-
-  /** Instance IDs to act on. All instances will be affected if this is not set. */
-  7: set<Range> updateOnlyTheseInstances
-
-  /**
-   * If true, use updateGroupSize as strict batching boundaries, and avoid proceeding to another
-   * batch until the preceding batch finishes updating.
-   */
-  8: bool waitForBatchCompletion
-
- /**
-  * If set, requires external calls to pulseJobUpdate RPC within the specified rate for the
-  * update to make progress. If no pulses received within specified interval the update will
-  * block. A blocked update is unable to continue but retains its current status. It may only get
-  * unblocked by a fresh pulseJobUpdate call.
-  */
-  9: i32 blockIfNoPulsesAfterMs
 }
 
 /** Event marking a state transition in job update lifecycle. */
@@ -1017,6 +1049,9 @@ service AuroraSchedulerManager extends ReadOnlyScheduler {
    * Responds with ResponseCode.INVALID_REQUEST in case an unknown updateId is specified.
    */
   Response pulseJobUpdate(1: string updateId, 2: SessionKey session)
+
+  /** Requests a job scaling action depending on the provided metric value */
+  Response autoScaleJob(1: JobKey jobKey, 2: double monitoredMetric, 3: SessionKey session)
 }
 
 struct InstanceConfigRewrite {

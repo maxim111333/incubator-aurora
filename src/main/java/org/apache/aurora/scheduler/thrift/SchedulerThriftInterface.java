@@ -108,6 +108,7 @@ import org.apache.aurora.gen.StartMaintenanceResult;
 import org.apache.aurora.gen.TaskConfig;
 import org.apache.aurora.gen.TaskQuery;
 import org.apache.aurora.scheduler.TaskIdGenerator;
+import org.apache.aurora.scheduler.autoscaler.Autoscaler;
 import org.apache.aurora.scheduler.base.JobKeys;
 import org.apache.aurora.scheduler.base.Jobs;
 import org.apache.aurora.scheduler.base.Numbers;
@@ -226,6 +227,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
   private final UUIDGenerator uuidGenerator;
   private final JobUpdateController jobUpdateController;
   private final boolean isUpdaterEnabled;
+  private final Autoscaler autoscaler;
 
   @Qualifier
   @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
@@ -247,7 +249,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       TaskIdGenerator taskIdGenerator,
       UUIDGenerator uuidGenerator,
       JobUpdateController jobUpdateController,
-      @EnableUpdater boolean isUpdaterEnabled) {
+      @EnableUpdater boolean isUpdaterEnabled,
+      Autoscaler autoscaler) {
 
     this.storage = requireNonNull(storage);
     this.lockManager = requireNonNull(lockManager);
@@ -264,6 +267,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
     this.uuidGenerator = requireNonNull(uuidGenerator);
     this.jobUpdateController = requireNonNull(jobUpdateController);
     this.isUpdaterEnabled = isUpdaterEnabled;
+    this.autoscaler = requireNonNull(autoscaler);
   }
 
   @Override
@@ -319,6 +323,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
                 storeProvider,
                 template,
                 sanitized.getInstanceIds());
+
+            autoscaler.addJobConfig(job);
           }
           return okEmptyResponse();
         } catch (LockException e) {
@@ -1328,22 +1334,16 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
     return builder.build();
   }
 
-  @Override
-  public Response startJobUpdate(JobUpdateRequest mutableRequest, SessionKey session) {
+  private Response startUpdate(
+      final IJobUpdateRequest request,
+      final IJobKey job,
+      final String user) {
+
     if (!isUpdaterEnabled) {
       return invalidResponse("Server-side updates are disabled on this cluster.");
     }
 
-    requireNonNull(mutableRequest);
-    requireNonNull(session);
-
-    // TODO(maxim): Switch to key field instead when AURORA-749 is fixed.
-    final IJobKey job = JobKeys.assertValid(IJobKey.build(new JobKey()
-        .setRole(mutableRequest.getTaskConfig().getOwner().getRole())
-        .setEnvironment(mutableRequest.getTaskConfig().getEnvironment())
-        .setName(mutableRequest.getTaskConfig().getJobName())));
-
-    JobUpdateSettings settings = requireNonNull(mutableRequest.getSettings());
+    IJobUpdateSettings settings = requireNonNull(request.getSettings());
     if (settings.getUpdateGroupSize() <= 0) {
       return invalidResponse("updateGroupSize must be positive.");
     }
@@ -1364,21 +1364,8 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
       return invalidResponse("minWaitInInstanceRunningMs must be non-negative.");
     }
 
-    final SessionContext context;
-    final IJobUpdateRequest request;
-    try {
-      context = sessionValidator.checkAuthenticated(session, ImmutableSet.of(job.getRole()));
-      request = IJobUpdateRequest.build(new JobUpdateRequest(mutableRequest).setTaskConfig(
-          ConfigurationManager.validateAndPopulate(
-              ITaskConfig.build(mutableRequest.getTaskConfig())).newBuilder()));
-
-      if (cronJobManager.hasJob(job)) {
-        return invalidResponse(NO_CRON_UPDATES);
-      }
-    } catch (AuthFailedException e) {
-      return errorResponse(AUTH_FAILED, e);
-    } catch (TaskDescriptionException e) {
-      return errorResponse(INVALID_REQUEST, e);
+    if (cronJobManager.hasJob(job)) {
+      return invalidResponse(NO_CRON_UPDATES);
     }
 
     return storage.write(new MutateWork.Quiet<Response>() {
@@ -1419,7 +1406,7 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
             .setSummary(new JobUpdateSummary()
                 .setJobKey(job.newBuilder())
                 .setUpdateId(updateId)
-                .setUser(context.getIdentity()))
+                .setUser(user))
             .setInstructions(instructions));
         try {
           validateTaskLimits(
@@ -1427,13 +1414,96 @@ class SchedulerThriftInterface implements AuroraAdmin.Iface {
               request.getInstanceCount(),
               quotaManager.checkJobUpdate(update));
 
-          jobUpdateController.start(update, context.getIdentity());
+          jobUpdateController.start(update, user);
           return okResponse(Result.startJobUpdateResult(new StartJobUpdateResult(updateId)));
         } catch (UpdateStateException | TaskValidationException e) {
           return errorResponse(INVALID_REQUEST, e);
         }
       }
     });
+  }
+
+  @Override
+  public Response startJobUpdate(JobUpdateRequest mutableRequest, SessionKey session) {
+    requireNonNull(mutableRequest);
+    requireNonNull(session);
+
+    // TODO(maxim): Switch to key field instead when AURORA-749 is fixed.
+    final IJobKey job = JobKeys.assertValid(IJobKey.build(new JobKey()
+        .setRole(mutableRequest.getTaskConfig().getOwner().getRole())
+        .setEnvironment(mutableRequest.getTaskConfig().getEnvironment())
+        .setName(mutableRequest.getTaskConfig().getJobName())));
+
+    final SessionContext context;
+    final IJobUpdateRequest request;
+    try {
+      context = sessionValidator.checkAuthenticated(session, ImmutableSet.of(job.getRole()));
+      request = IJobUpdateRequest.build(new JobUpdateRequest(mutableRequest).setTaskConfig(
+          ConfigurationManager.validateAndPopulate(
+              ITaskConfig.build(mutableRequest.getTaskConfig())).newBuilder()));
+
+    } catch (AuthFailedException e) {
+      return errorResponse(AUTH_FAILED, e);
+    } catch (TaskDescriptionException e) {
+      return errorResponse(INVALID_REQUEST, e);
+    }
+
+    return startUpdate(request, job, context.getIdentity());
+  }
+
+  @Override
+  public Response autoScaleJob(JobKey mutableJobKey, double monitoredMetric, SessionKey session) {
+
+    IJobKey jobKey = JobKeys.assertValid(IJobKey.build(requireNonNull(mutableJobKey)));
+    try {
+      Set<IScheduledTask> activeTasks =
+          Storage.Util.fetchTasks(storage, Query.jobScoped(jobKey).byStatus(Tasks.ACTIVE_STATES));
+
+      int currentCount = activeTasks.size();
+      LOG.info("Current active count: " + currentCount);
+
+      if (currentCount == 0) {
+        return invalidResponse(String.format(
+            "Job %s does not exist",
+            JobKeys.canonicalString(jobKey)));
+      }
+
+      int targetCount = autoscaler.getInstanceCount(jobKey, monitoredMetric, currentCount);
+      LOG.info("Target count: " + targetCount);
+
+      if (currentCount != targetCount) {
+        // TODO(maxim): figure the best way to get a hold of the most recent task config.
+        // Perhaps, validating all task configs are identical and throw if not.
+        IScheduledTask task = Iterables.getLast(activeTasks);
+
+        IJobConfiguration jobConfiguration = autoscaler.getJobConfig(jobKey);
+
+        JobUpdateRequest updateRequest = new JobUpdateRequest()
+            .setInstanceCount(targetCount)
+            .setTaskConfig(task.getAssignedTask().getTask().newBuilder())
+            .setSettings(jobConfiguration.getAutoScaleConfig().getUpdateSettings().newBuilder());
+
+
+        Response response = startUpdate(
+            IJobUpdateRequest.build(updateRequest),
+            jobKey,
+            "Aurora AutoScaler");
+
+        if (response.getResponseCode() == OK) {
+          int delta = targetCount - currentCount;
+          return addMessage(
+              emptyResponse(),
+              OK,
+              String.format("%s %d instances", delta > 0 ? "Added" : "Removed", Math.abs(delta)));
+
+        } else {
+          return response;
+        }
+      }
+      return addMessage(emptyResponse(), OK, "No instance count changes required.");
+    } catch (Autoscaler.AutoscalerException e) {
+      return errorResponse(INVALID_REQUEST, e);
+    }
   }
 
   @Override

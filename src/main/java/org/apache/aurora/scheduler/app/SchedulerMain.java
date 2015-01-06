@@ -48,6 +48,7 @@ import org.apache.aurora.auth.CapabilityValidator;
 import org.apache.aurora.auth.SessionValidator;
 import org.apache.aurora.auth.UnsecureAuthModule;
 import org.apache.aurora.scheduler.SchedulerLifecycle;
+import org.apache.aurora.scheduler.autoscaler.AutoscalerModule;
 import org.apache.aurora.scheduler.configuration.Resources;
 import org.apache.aurora.scheduler.cron.quartz.CronModule;
 import org.apache.aurora.scheduler.log.mesos.MesosLogStreamModule;
@@ -145,6 +146,7 @@ public class SchedulerMain extends AbstractApplication {
         )
         .add(new ThriftModule())
         .add(new ThriftAuthModule())
+        .add(new AutoscalerModule())
         .build();
   }
 

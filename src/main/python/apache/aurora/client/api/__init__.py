@@ -29,9 +29,11 @@ from .updater_util import UpdaterConfig
 
 from gen.apache.aurora.api.constants import LIVE_STATES
 from gen.apache.aurora.api.ttypes import (
+    JobAutoScaleConfig,
     JobKey,
     JobUpdateQuery,
     JobUpdateRequest,
+    JobUpdateSettings,
     Lock,
     ResourceAggregate,
     ResponseCode,
@@ -77,7 +79,25 @@ class AuroraClientAPI(object):
     log.info('Creating job %s' % config.name())
     log.debug('Full configuration: %s' % config.job())
     log.debug('Lock %s' % lock)
-    return self._scheduler_proxy.createJob(config.job(), lock)
+
+    update_settings = JobUpdateSettings(
+        updateGroupSize=4,
+        maxWaitToInstanceRunningMs=15 * 1000,
+        minWaitInInstanceRunningMs=3000,
+    )
+
+    job = config.job()
+    job.autoScaleConfig = JobAutoScaleConfig(
+        targetUtilizationMetric=60.0,
+        tolerancePercent=5,
+        minTotalInstances=2,
+        maxTotalInstances=10,
+        maxInstanceIncrement=10,
+        maxInstanceDecrement=2,
+        updateSettings=update_settings
+    )
+
+    return self._scheduler_proxy.createJob(job, lock)
 
   def schedule_cron(self, config, lock=None):
     log.info("Registering job %s with cron" % config.name())
@@ -148,6 +168,11 @@ class AuroraClientAPI(object):
     updater = Updater(config, health_check_interval_seconds, self._scheduler_proxy)
 
     return updater.update(instances)
+
+  def request_auto_scale(self, job_key, metric):
+    self._assert_valid_job_key(job_key)
+    # log.info("About to call scheduler with: %s %s" % (job_key.to_thrift(), metric))
+    return self._scheduler_proxy.autoScaleJob(job_key.to_thrift(), metric)
 
   def start_job_update(self, config, instances=None):
     """Requests Scheduler to start job update process.

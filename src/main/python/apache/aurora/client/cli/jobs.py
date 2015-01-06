@@ -20,6 +20,7 @@ import os
 import pprint
 import subprocess
 import textwrap
+import time
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 
@@ -732,6 +733,42 @@ class UpdateCommand(Verb):
     return EXIT_OK
 
 
+SIMULATION_FILE_ARGUMENT = CommandOption('simulation_file', type=str, default=None,
+    metavar="pathname", help='pathname of the aurora autoscaling simulation file')
+
+
+class SimulateAutoScaling(Verb):
+
+  @property
+  def help(self):
+    return "Simulate monitored metric changes to trigger job autoscaling."
+
+  @property
+  def name(self):
+    return "simulate-autoscaling"
+
+  def get_options(self):
+    return [JOBSPEC_ARGUMENT, SIMULATION_FILE_ARGUMENT]
+
+  def execute(self, context):
+    jobkey = context.options.jobspec
+    api = context.get_api(jobkey.cluster)
+    metrics = []
+    with open(context.options.simulation_file, 'r') as metric_rows:
+      metrics = [metric.strip() for metric in metric_rows]
+
+    # context.print_out("Loaded metrics: %s" % metrics)
+    for metric in metrics:
+      context.print_out("Calling autoscaler with: %s" % metric)
+      resp = api.request_auto_scale(jobkey, metric)
+      # context.print_out("Call returned: %s" % resp)
+      context.log_response(resp)
+      context.print_out("")
+      time.sleep(15)
+
+    context.print_out("Simulation completed")
+    return EXIT_OK
+
 class Job(Noun):
   @property
   def name(self):
@@ -758,3 +795,4 @@ class Job(Noun):
     self.register_verb(RestartCommand())
     self.register_verb(StatusCommand())
     self.register_verb(UpdateCommand())
+    self.register_verb(SimulateAutoScaling())
