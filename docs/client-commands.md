@@ -11,7 +11,7 @@ Aurora Client Commands
     - [Killing a Job](#killing-a-job)
     - [Updating a Job](#updating-a-job)
         - [Asynchronous job updates (beta)](#user-content-asynchronous-job-updates-beta)
-        - [Coordinated job updates (beta)](#user-content-coordinated-job-updates-beta)
+            - [Coordinated job updates (beta)](#user-content-coordinated-job-updates-beta)
     - [Renaming a Job](#renaming-a-job)
     - [Restarting Jobs](#restarting-jobs)
 - [Cron Jobs](#cron-jobs)
@@ -223,11 +223,11 @@ You may `abort` a job update regardless of the state it is in. This will
 instruct the scheduler to completely abandon the job update and leave the job
 in the current (possibly partially-updated) state.
 
-#### Coordinated job updates (beta)
+##### Coordinated job updates (beta)
 
 Some Aurora services may benefit from having more control over the
 [asynchronous scheduler updater](#user-content-asynchronous-job-updates-beta) by explicitly
-acknowledging ("heartbeating") the job update progress. This may be helpful for mission-critical
+acknowledging ("heartbeating") job update progress. This may be helpful for mission-critical
 service updates where explicit job health monitoring is vital during the entire job update
 lifecycle. Such job updates would rely on an external service (or a custom client) periodically
 pulsing an active coordinated job update via a
