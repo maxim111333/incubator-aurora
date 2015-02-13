@@ -11,7 +11,7 @@ Aurora Client Commands
     - [Killing a Job](#killing-a-job)
     - [Updating a Job](#updating-a-job)
         - [Asynchronous job updates (beta)](#user-content-asynchronous-job-updates-beta)
-        -[Coordinated job updates (beta)](#user-content-coordinated-job-updates-beta)
+        - [Coordinated job updates (beta)](#user-content-coordinated-job-updates-beta)
     - [Renaming a Job](#renaming-a-job)
     - [Restarting Jobs](#restarting-jobs)
 - [Cron Jobs](#cron-jobs)
