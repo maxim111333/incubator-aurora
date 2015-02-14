@@ -235,9 +235,9 @@ pulsing an active coordinated job update via a
 
 A coordinated update is defined by setting a positive
 [pulse_interval_secs](configuration-reference.md#updateconfig-objects) value in job configuration
-file. If no pulses received within specified interval the update will get blocked. A blocked update
-is unable to continue rolling forward (or rolling back) but retains its active status. It may only
-get unblocked by a fresh `pulseJobUpdate` call.
+file. If no pulses are received within specified interval the update will be blocked. A blocked
+update is unable to continue rolling forward (or rolling back) but retains its active status.
+It may only be unblocked by a fresh `pulseJobUpdate` call.
 
 NOTE: A coordinated update starts in `ROLL_FORWARD_AWAITING_PULSE` state and will not make any
 progress until the first pulse arrives. However, a paused update (`ROLL_FORWARD_PAUSED` or
