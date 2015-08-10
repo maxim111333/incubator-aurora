@@ -61,4 +61,9 @@ public class FakeOfferManager implements OfferManager {
   public Optional<HostOffer> getOffer(Protos.SlaveID slaveId) {
     return Optional.absent();
   }
+
+  @Override
+  public Iterable<HostOffer> getDeltaOffers() {
+    return null;
+  }
 }

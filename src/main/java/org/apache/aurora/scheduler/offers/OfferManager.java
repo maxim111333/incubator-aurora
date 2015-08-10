@@ -15,6 +15,7 @@ package org.apache.aurora.scheduler.offers;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,10 +29,12 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Queues;
 import com.google.common.eventbus.Subscribe;
 import com.twitter.common.inject.TimedInterceptor.Timed;
 import com.twitter.common.quantity.Amount;
@@ -126,6 +129,8 @@ public interface OfferManager extends EventSubscriber {
    * @return An offer for the slave ID.
    */
   Optional<HostOffer> getOffer(SlaveID slaveId);
+
+  Iterable<HostOffer> getDeltaOffers();
 
   /**
    * Calculates the amount of time before an offer should be 'returned' by declining it.
@@ -239,6 +244,11 @@ public interface OfferManager extends EventSubscriber {
       return hostOffers.get(slaveId);
     }
 
+    @Override
+    public Iterable<HostOffer> getDeltaOffers() {
+      return hostOffers.getDeltaOffers();
+    }
+
     /**
      * Updates the preference of a host's offers.
      *
@@ -283,6 +293,7 @@ public interface OfferManager extends EventSubscriber {
       private final Map<OfferID, HostOffer> offersById = Maps.newHashMap();
       private final Map<SlaveID, HostOffer> offersBySlave = Maps.newHashMap();
       private final Map<String, HostOffer> offersByHost = Maps.newHashMap();
+      private final Queue<HostOffer> offerQueue = Queues.newArrayDeque();
       // TODO(maxim): Expose via a debug endpoint. AURORA-1136.
       // Keep track of offer->groupKey mappings that will never be matched to avoid redundant
       // scheduling attempts. See VetoGroup for more details on static ban.
@@ -303,6 +314,7 @@ public interface OfferManager extends EventSubscriber {
         offersById.put(offer.getOffer().getId(), offer);
         offersBySlave.put(offer.getOffer().getSlaveId(), offer);
         offersByHost.put(offer.getOffer().getHostname(), offer);
+        offerQueue.add(offer);
       }
 
       synchronized boolean remove(OfferID id) {
@@ -323,6 +335,15 @@ public interface OfferManager extends EventSubscriber {
           remove(offer.getOffer().getId());
           add(new HostOffer(offer.getOffer(), attributes));
         }
+      }
+
+      synchronized Iterable<HostOffer> getDeltaOffers() {
+        ImmutableList.Builder<HostOffer> delta = ImmutableList.builder();
+        while(!offerQueue.isEmpty()) {
+          delta.add(offerQueue.remove());
+        }
+
+        return delta.build();
       }
 
       synchronized Iterable<HostOffer> getWeaklyConsistentOffers() {
