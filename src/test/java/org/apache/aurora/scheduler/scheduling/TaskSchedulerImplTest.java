@@ -122,7 +122,7 @@ public class TaskSchedulerImplTest extends EasyMockTest {
 
     return expect(assigner.maybeAssign(
         storageUtil.mutableStoreProvider,
-        new ResourceRequest(task.getAssignedTask().getTask(), EMPTY),
+        new ResourceRequest(task.getAssignedTask().getTask(), EMPTY, ""),
         TaskGroupKey.from(task.getAssignedTask().getTask()),
         Tasks.id(task),
         reservationMap));
@@ -260,7 +260,7 @@ public class TaskSchedulerImplTest extends EasyMockTest {
     expectAsMap(NO_RESERVATION);
     expect(assigner.maybeAssign(
         EasyMock.anyObject(),
-        eq(new ResourceRequest(taskA.getAssignedTask().getTask(), EMPTY)),
+        eq(new ResourceRequest(taskA.getAssignedTask().getTask(), EMPTY, "")),
         eq(TaskGroupKey.from(taskA.getAssignedTask().getTask())),
         eq(Tasks.id(taskA)),
         eq(NO_RESERVATION))).andReturn(true);

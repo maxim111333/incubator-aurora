@@ -15,14 +15,26 @@ package org.apache.aurora.scheduler.filter;
 
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.netflix.fenzo.AssignmentFailure;
+import com.netflix.fenzo.ConstraintFailure;
+import com.netflix.fenzo.SchedulingResult;
+import com.netflix.fenzo.TaskAssignmentResult;
+import com.netflix.fenzo.TaskRequest;
+import com.netflix.fenzo.VirtualMachineLease;
+import com.netflix.fenzo.functions.Action1;
 
 import com.twitter.common.inject.TimedInterceptor.Timed;
 import com.twitter.common.quantity.Amount;
@@ -33,9 +45,12 @@ import org.apache.aurora.gen.TaskConstraint;
 import org.apache.aurora.scheduler.ResourceSlot;
 import org.apache.aurora.scheduler.configuration.ConfigurationManager;
 import org.apache.aurora.scheduler.mesos.ExecutorSettings;
+import org.apache.aurora.scheduler.offers.OfferManager;
+import org.apache.aurora.scheduler.scheduling.fenzo.Converter;
 import org.apache.aurora.scheduler.storage.entities.IAttribute;
 import org.apache.aurora.scheduler.storage.entities.IConstraint;
 import org.apache.aurora.scheduler.storage.entities.IHostAttributes;
+import org.apache.mesos.Protos;
 
 import static java.util.Objects.requireNonNull;
 
@@ -52,6 +67,7 @@ import static org.apache.aurora.scheduler.filter.SchedulingFilterImpl.ResourceVe
  * fulfilled, and that tasks are allowed to run on the given machine.
  */
 public class SchedulingFilterImpl implements SchedulingFilter {
+  private static final Logger LOG = Logger.getLogger(SchedulingFilterImpl.class.getName());
   private static final Optional<Veto> NO_VETO = Optional.absent();
 
   private static final Set<MaintenanceMode> VETO_MODES = EnumSet.of(DRAINING, DRAINED);
@@ -136,11 +152,25 @@ public class SchedulingFilterImpl implements SchedulingFilter {
       });
 
   private final ExecutorSettings executorSettings;
+  private final com.netflix.fenzo.TaskScheduler fenzoScheduler;
+  private final OfferManager offerManager;
 
   @Inject
   @VisibleForTesting
-  public SchedulingFilterImpl(ExecutorSettings executorSettings) {
+  public SchedulingFilterImpl(ExecutorSettings executorSettings, OfferManager offerManager) {
     this.executorSettings = requireNonNull(executorSettings);
+    this.offerManager = requireNonNull(offerManager);
+    this.fenzoScheduler = new com.netflix.fenzo.TaskScheduler.Builder()
+        .withLeaseOfferExpirySecs(120)
+        .withLeaseRejectAction(new Action1<VirtualMachineLease>() {
+          @Override
+          public void call(VirtualMachineLease virtualMachineLease) {
+            offerManager.cancelOffer(
+                // Offers need to stop expiring on timeout.
+                Protos.OfferID.newBuilder().setValue(virtualMachineLease.getId()).build());
+          }
+        })
+        .build();
   }
 
   private Optional<Veto> getConstraintVeto(
@@ -174,36 +204,73 @@ public class SchedulingFilterImpl implements SchedulingFilter {
   @Timed("scheduling_filter")
   @Override
   public Set<Veto> filter(UnusedResource resource, ResourceRequest request) {
-    // Apply veto filtering rules from higher to lower score making sure we cut over and return
-    // early any time a veto from a score group is applied. This helps to more accurately report
-    // a veto reason in the NearestFit.
 
-    // 1. Dedicated constraint check (highest score).
-    if (!ConfigurationManager.isDedicated(request.getConstraints())
-        && isDedicated(resource.getAttributes())) {
+    Iterable<VirtualMachineLease> leases = Iterables.transform(
+        offerManager.getDeltaOffers(),
+        e -> Converter.getVMLease(e));
 
-      return ImmutableSet.of(Veto.dedicatedHostConstraintMismatch());
+    TaskRequest taskRequest = Converter.getTaskRequest(request.getTask(), request.getTaskId());
+    SchedulingResult result = fenzoScheduler.scheduleOnce(
+        ImmutableList.of(taskRequest),
+        ImmutableList.copyOf(leases));
+
+    if (result.getFailures().isEmpty()) {
+      return ImmutableSet.of();
+    } else {
+      Map<TaskRequest, List<TaskAssignmentResult>> assignmentResult = result.getFailures();
+      if (assignmentResult.isEmpty()) {
+        throw new IllegalStateException("Missing assignment info " + assignmentResult.size());
+      }
+
+      List<TaskAssignmentResult> assignmentResults =
+          Iterables.getOnlyElement(assignmentResult.values());
+
+      TaskAssignmentResult taskAssignmentResult = Iterables.getOnlyElement(assignmentResults);
+
+      ConstraintFailure constraintFailure = taskAssignmentResult.getConstraintFailure();
+      if (constraintFailure != null) {
+        LOG.info("Fenzo constraint failure: " + constraintFailure.toString());
+        return ImmutableSet.of(Veto.constraintMismatch(constraintFailure.toString()));
+      }
+
+      taskAssignmentResult.getFailures().stream()
+          .forEach(e -> LOG.info("Fenzo assignment failure: " + e.toString()));
+
+      return ImmutableSet.copyOf(Iterables.transform(
+          taskAssignmentResult.getFailures(),
+          e -> Veto.insufficientResources(e.toString(), 100)));
     }
 
-    // 2. Host maintenance check.
-    Optional<Veto> maintenanceVeto = getMaintenanceVeto(resource.getAttributes().getMode());
-    if (maintenanceVeto.isPresent()) {
-      return maintenanceVeto.asSet();
-    }
-
-    // 3. Value and limit constraint check.
-    Optional<Veto> constraintVeto = getConstraintVeto(
-        request.getConstraints(),
-        request.getJobState(),
-        resource.getAttributes().getAttributes());
-
-    if (constraintVeto.isPresent()) {
-      return constraintVeto.asSet();
-    }
-
-    // 4. Resource check (lowest score).
-    return getResourceVetoes(
-        resource.getResourceSlot(),
-        ResourceSlot.from(request.getTask(), executorSettings));
+//    // Apply veto filtering rules from higher to lower score making sure we cut over and return
+//    // early any time a veto from a score group is applied. This helps to more accurately report
+//    // a veto reason in the NearestFit.
+//
+//    // 1. Dedicated constraint check (highest score).
+//    if (!ConfigurationManager.isDedicated(request.getConstraints())
+//        && isDedicated(resource.getAttributes())) {
+//
+//      return ImmutableSet.of(Veto.dedicatedHostConstraintMismatch());
+//    }
+//
+//    // 2. Host maintenance check.
+//    Optional<Veto> maintenanceVeto = getMaintenanceVeto(resource.getAttributes().getMode());
+//    if (maintenanceVeto.isPresent()) {
+//      return maintenanceVeto.asSet();
+//    }
+//
+//    // 3. Value and limit constraint check.
+//    Optional<Veto> constraintVeto = getConstraintVeto(
+//        request.getConstraints(),
+//        request.getJobState(),
+//        resource.getAttributes().getAttributes());
+//
+//    if (constraintVeto.isPresent()) {
+//      return constraintVeto.asSet();
+//    }
+//
+//    // 4. Resource check (lowest score).
+//    return getResourceVetoes(
+//        resource.getResourceSlot(),
+//        ResourceSlot.from(request.getTask(), executorSettings));
   }
 }

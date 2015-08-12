@@ -27,30 +27,23 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.netflix.fenzo.SchedulingResult;
-import com.netflix.fenzo.TaskRequest;
-import com.netflix.fenzo.VirtualMachineLease;
-import com.netflix.fenzo.functions.Action1;
-
-import com.twitter.common.inject.TimedInterceptor.Timed;
-import com.twitter.common.stats.Stats;
 
 import org.apache.aurora.scheduler.HostOffer;
+import org.apache.aurora.scheduler.ResourceSlot;
 import org.apache.aurora.scheduler.Resources;
 import org.apache.aurora.scheduler.base.TaskGroupKey;
 import org.apache.aurora.scheduler.filter.SchedulingFilter;
 import org.apache.aurora.scheduler.filter.SchedulingFilter.ResourceRequest;
+import org.apache.aurora.scheduler.filter.SchedulingFilter.UnusedResource;
 import org.apache.aurora.scheduler.mesos.MesosTaskFactory;
 import org.apache.aurora.scheduler.offers.OfferManager;
-import org.apache.aurora.scheduler.scheduling.fenzo.Converter;
 import org.apache.aurora.scheduler.storage.entities.IAssignedTask;
-import org.apache.mesos.Protos;
 import org.apache.mesos.Protos.TaskInfo;
 
-import static java.util.Objects.requireNonNull;
+import com.twitter.common.inject.TimedInterceptor.Timed;
+import com.twitter.common.stats.Stats;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.aurora.gen.ScheduleStatus.LOST;
 import static org.apache.aurora.gen.ScheduleStatus.PENDING;
 import static org.apache.aurora.scheduler.storage.Storage.MutableStoreProvider;
@@ -91,7 +84,6 @@ public interface TaskAssigner {
     private final SchedulingFilter filter;
     private final MesosTaskFactory taskFactory;
     private final OfferManager offerManager;
-    private final com.netflix.fenzo.TaskScheduler fenzoScheduler;
 
     @Inject
     public TaskAssignerImpl(
@@ -104,17 +96,6 @@ public interface TaskAssigner {
       this.filter = requireNonNull(filter);
       this.taskFactory = requireNonNull(taskFactory);
       this.offerManager = requireNonNull(offerManager);
-      this.fenzoScheduler = new com.netflix.fenzo.TaskScheduler.Builder()
-          .withLeaseOfferExpirySecs(120)
-          .withLeaseRejectAction(new Action1<VirtualMachineLease>() {
-            @Override
-            public void call(VirtualMachineLease virtualMachineLease) {
-              offerManager.cancelOffer(
-                  // Offers need to stop expiring on timeout.
-                  Protos.OfferID.newBuilder().setValue(virtualMachineLease.getId()).build());
-            }
-          })
-          .build();
     }
 
     private TaskInfo assign(
@@ -164,22 +145,12 @@ public interface TaskAssigner {
           // This slave is reserved for a different task group -> skip.
           continue;
         }
-//        Set<Veto> vetoes = filter.filter(
-//            new UnusedResource(ResourceSlot.from(offer.getOffer()), offer.getAttributes()),
-//            resourceRequest);
 
-        Iterable<VirtualMachineLease> leases = Iterables.transform(
-            offerManager.getDeltaOffers(),
-            e -> Converter.getVMLease(e));
+        Set<SchedulingFilter.Veto> vetoes = filter.filter(
+            new UnusedResource(ResourceSlot.from(offer.getOffer()), offer.getAttributes()),
+            resourceRequest);
 
-        TaskRequest taskRequest = Converter.getTaskRequest(resourceRequest.getTask(), taskId);
-        SchedulingResult result = fenzoScheduler.scheduleOnce(
-            ImmutableList.of(taskRequest),
-            ImmutableList.copyOf(leases));
-
-        LOG.info("Got resultmap: " + result.getResultMap().toString());
-
-        if (result.getFailures().isEmpty()) {
+        if (vetoes.isEmpty()) {
           TaskInfo taskInfo = assign(
               storeProvider,
               offer.getOffer(),
@@ -207,13 +178,14 @@ public interface TaskAssigner {
             return false;
           }
         } else {
-//          if (Veto.identifyGroup(vetoes) == VetoGroup.STATIC) {
-//            // Never attempt to match this offer/groupKey pair again.
-//            offerManager.banOffer(offer.getOffer().getId(), groupKey);
-//          }
 
-//          LOG.fine("Slave " + offer.getOffer().getHostname()
-//              + " vetoed task " + taskId + ": " + vetoes);
+          if (SchedulingFilter.Veto.identifyGroup(vetoes) == SchedulingFilter.VetoGroup.STATIC) {
+            // Never attempt to match this offer/groupKey pair again.
+            offerManager.banOffer(offer.getOffer().getId(), groupKey);
+          }
+
+          LOG.fine("Slave " + offer.getOffer().getHostname()
+              + " vetoed task " + taskId + ": " + vetoes);
           return false;
         }
       }

@@ -143,7 +143,7 @@ public interface TaskScheduler extends EventSubscriber {
 
         boolean launched = assigner.maybeAssign(
             store,
-            new ResourceRequest(task, aggregate),
+            new ResourceRequest(task, aggregate, taskId),
             TaskGroupKey.from(task),
             taskId,
             reservations.asMap());

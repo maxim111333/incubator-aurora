@@ -172,7 +172,7 @@ public interface PreemptionVictimFilter {
 
         Set<Veto> vetoes = schedulingFilter.filter(
             new UnusedResource(totalResource, attributes.get()),
-            new ResourceRequest(pendingTask, jobState));
+            new ResourceRequest(pendingTask, jobState, ""));
 
         if (vetoes.isEmpty()) {
           return Optional.of(ImmutableSet.copyOf(toPreemptTasks));
