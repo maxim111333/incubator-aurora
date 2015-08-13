@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.netflix.fenzo.AssignmentFailure;
+import com.netflix.fenzo.AutoScaleAction;
 import com.netflix.fenzo.ConstraintFailure;
 import com.netflix.fenzo.SchedulingResult;
 import com.netflix.fenzo.TaskAssignmentResult;
@@ -205,18 +206,25 @@ public class SchedulingFilterImpl implements SchedulingFilter {
   @Override
   public Set<Veto> filter(UnusedResource resource, ResourceRequest request) {
 
+    // Get offers since the last schedule run
     Iterable<VirtualMachineLease> leases = Iterables.transform(
         offerManager.getDeltaOffers(),
         e -> Converter.getVMLease(e));
 
+    // Create task request
     TaskRequest taskRequest = Converter.getTaskRequest(request.getTask(), request.getTaskId());
+
+    // Run Fenzo
     SchedulingResult result = fenzoScheduler.scheduleOnce(
         ImmutableList.of(taskRequest),
         ImmutableList.copyOf(leases));
 
+    // Check results
     if (result.getFailures().isEmpty()) {
+      // Success
       return ImmutableSet.of();
     } else {
+      // Failure
       Map<TaskRequest, List<TaskAssignmentResult>> assignmentResult = result.getFailures();
       if (assignmentResult.isEmpty()) {
         throw new IllegalStateException("Missing assignment info " + assignmentResult.size());
