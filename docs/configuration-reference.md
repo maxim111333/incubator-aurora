@@ -329,7 +329,7 @@ Job Schema
   ```health_check_config``` | ```heath_check_config``` object | Parameters for controlling a task's health checks via HTTP. Only used if a  health port was assigned with a command line wildcard.
   ```container``` | ```Container``` object | An optional container to run all processes inside of.
   ```lifecycle``` | ```LifecycleConfig``` object | An optional task lifecycle configuration that dictates commands to be executed on startup/teardown.  HTTP lifecycle is enabled by default if the "health" port is requested.  See [LifecycleConfig Objects](#lifecycleconfig-objects) for more information.
-  ```tier``` | ``` String | Task tier type. Intends to simplify task configuration by hiding various configuration knobs behind a task tier definition. This is work [in progress](https://issues.apache.org/jira/browse/AURORA-1343) and is currently only supported for the best effort tasks.
+  ```tier``` | String | Task tier type. Intends to simplify task configuration by hiding various configuration knobs behind a task tier definition. This is work [in progress](https://issues.apache.org/jira/browse/AURORA-1343) and is currently only supported for the best effort tasks.
 
 ### Services
 
