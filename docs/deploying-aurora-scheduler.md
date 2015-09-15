@@ -199,10 +199,10 @@ See [this document](configuration-reference.md#best-effort-jobs) for more featur
 Set these scheduler flag to allow receiving revocable Mesos offers:
 
     -receive_revocable_resources=true
-    
-Specify a tier configuration file path: 
 
-    -tier_config=path/to/tiers/config.json 
+Specify a tier configuration file path:
+
+    -tier_config=path/to/tiers/config.json
 
 Example [tier configuration file](../src/test/resources/org/apache/aurora/scheduler/tiers-example.json).
 

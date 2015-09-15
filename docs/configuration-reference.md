@@ -345,8 +345,8 @@ either due to human error or machine failure.
 
 **WARNING**: This feature is currently in alpha status. Do not use it in production clusters!
 
-Mesos [supports a concept of best effort (BE) tasks](http://mesos.apache.org/documentation/latest/oversubscription/) 
-by oversubscribing machine resources by the amount deemed safe to not affect the existing 
+Mesos [supports a concept of best effort (BE) tasks](http://mesos.apache.org/documentation/latest/oversubscription/)
+by oversubscribing machine resources by the amount deemed safe to not affect the existing
 non-BE tasks. Aurora now supports BE jobs via a `tier` setting set to `revocable` value.
 
 More implementation details in this [ticket](https://issues.apache.org/jira/browse/AURORA-1343).
