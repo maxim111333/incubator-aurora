@@ -26,7 +26,7 @@ Aurora + Thermos Configuration Reference
 - [Job Schema](#job-schema)
     - [Job Objects](#job-objects)
     - [Services](#services)
-    - [Best Effort Jobs](#best-effort-jobs)
+    - [Revocable Jobs](#revocable-jobs)
     - [UpdateConfig Objects](#updateconfig-objects)
     - [HealthCheckConfig Objects](#healthcheckconfig-objects)
     - [Announcer Objects](#announcer-objects)
@@ -329,7 +329,7 @@ Job Schema
   ```health_check_config``` | ```heath_check_config``` object | Parameters for controlling a task's health checks via HTTP. Only used if a  health port was assigned with a command line wildcard.
   ```container``` | ```Container``` object | An optional container to run all processes inside of.
   ```lifecycle``` | ```LifecycleConfig``` object | An optional task lifecycle configuration that dictates commands to be executed on startup/teardown.  HTTP lifecycle is enabled by default if the "health" port is requested.  See [LifecycleConfig Objects](#lifecycleconfig-objects) for more information.
-  ```tier``` | String | Task tier type. Intends to simplify task configuration by hiding various configuration knobs behind a task tier definition. This is work [in progress](https://issues.apache.org/jira/browse/AURORA-1343) and is currently only supported for the best effort tasks.
+  ```tier``` | String | Task tier type. When set to `revocable` requires the task to run with Mesos revocable resources. This is work [in progress](https://issues.apache.org/jira/browse/AURORA-1343) and is currently only supported for the revocable tasks. The ultimate goal is to simplify task configuration by hiding various configuration knobs behind a task tier definition. See AURORA-1343 and AURORA-1443 for more details.
 
 ### Services
 
@@ -341,13 +341,14 @@ Jobs without the service bit set only restart up to
 `max_task_failures` times and only if they terminated unsuccessfully
 either due to human error or machine failure.
 
-### Best Effort Jobs
+### Revocable Jobs
 
 **WARNING**: This feature is currently in alpha status. Do not use it in production clusters!
 
-Mesos [supports a concept of best effort (BE) tasks](http://mesos.apache.org/documentation/latest/oversubscription/)
+Mesos [supports a concept of revocable tasks](http://mesos.apache.org/documentation/latest/oversubscription/)
 by oversubscribing machine resources by the amount deemed safe to not affect the existing
-non-BE tasks. Aurora now supports BE jobs via a `tier` setting set to `revocable` value.
+non-revocable tasks. Aurora now supports revocable jobs via a `tier` setting set to `revocable`
+value.
 
 More implementation details in this [ticket](https://issues.apache.org/jira/browse/AURORA-1343).
 
