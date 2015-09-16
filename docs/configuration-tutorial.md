@@ -586,8 +586,7 @@ Three attributes deal with configuring the Job's Task:
     jobs in the same role with higher priority. **WARNING**: To run non-dedicated Jobs
     (jobs that don't have a [dedicated](deploying-aurora-scheduler.md#dedicated-attribute)
     constraint set) at this level, the Job role must have the appropriate quota.
-    To grant quota to a particular role in production, operators use
-    the ``aurora_admin set_quota`` command.
+    See [this document](resource-isolation.md#resource-quota) for more details.
 
 The final three Job attributes each take an object as their value.
 
