@@ -194,7 +194,7 @@ See [security.md](security.md).
 ## Configuring Resource Oversubscription
 
 **WARNING**: This feature is currently in alpha status. Do not use it in production clusters!
-See [this document](configuration-reference.md#best-effort-jobs) for more feature details.
+See [this document](configuration-reference.md#revocable-jobs) for more feature details.
 
 Set these scheduler flag to allow receiving revocable Mesos offers:
 
