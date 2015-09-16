@@ -13,6 +13,7 @@ change.
 - [Disk Space](#disk-space)
 - [Disk Space Sizing](#disk-space-sizing)
 - [Other Resources](#other-resources)
+- [Resource Quota](#resource-quota)
 
 ## Introduction
 
@@ -145,3 +146,15 @@ Other resources, such as network bandwidth, do not have any performance
 guarantees. For some resources, such as memory bandwidth, there are no
 practical sharing methods so some application combinations collocated on
 the same host may cause contention.
+
+## Resource Quota
+
+Aurora requires resource quotas for
+[production non-dedicated jobs](configuration-reference.md#job-objects). Quota is enforced at
+the job role level and when set, defines a non-preemptible pool of compute resources within
+that role.
+
+To grant quota to a particular role in production use `aurora_admin set_quota` command.
+
+NOTE: all job types (service, adhoc or cron) require role resource quota unless a job has
+[dedicated constraint set](deploying-aurora-scheduler.md#dedicated-attribute).
