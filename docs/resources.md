@@ -1,9 +1,5 @@
-Resource Isolation and Sizing
+Resources and Sizing
 =============================
-
-**NOTE**: Resource Isolation and Sizing is very much a work in progress.
-Both user-facing aspects and how it works under the hood are subject to
-change.
 
 - [Introduction](#introduction)
 - [CPU Isolation](#cpu-isolation)
@@ -14,6 +10,7 @@ change.
 - [Disk Space Sizing](#disk-space-sizing)
 - [Other Resources](#other-resources)
 - [Resource Quota](#resource-quota)
+- [Task Preemption](#task-preemption)
 
 ## Introduction
 
@@ -158,3 +155,10 @@ To grant quota to a particular role in production use `aurora_admin set_quota` c
 
 NOTE: all job types (service, adhoc or cron) require role resource quota unless a job has
 [dedicated constraint set](deploying-aurora-scheduler.md#dedicated-attribute).
+
+## Task preemption
+
+Under a particular resource shortage pressure, tasks from
+[production](configuration-reference.md#job-objects) jobs may preempt tasks from any non-production
+job. A production task may only be preempted by tasks from production jobs in the same role with
+higher [priority](configuration-reference.md#job-objects).

@@ -332,7 +332,8 @@ configuration file, and displays the parsed configuration.
     aurora quota get CLUSTER/ROLE
 
   Prints the production quota allocated to the role's value at the given
-cluster. Only non-dedicated production jobs consume quota.
+cluster. Only non-[dedicated](deploying-aurora-scheduler.md#dedicated-attribute) production
+jobs consume quota.
 
 ### Finding a Job on Web UI
 
