@@ -206,7 +206,7 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
             for (StoredJobUpdateDetails storedDetails : snapshot.getJobUpdateDetails()) {
               JobUpdateDetails details = storedDetails.getDetails();
               updateStore.saveJobUpdate(
-                  IJobUpdate.build(details.getUpdate()),
+                  IJobUpdate.build(ThriftBackfill.backFillJobUpdate(details.getUpdate())),
                   Optional.fromNullable(storedDetails.getLockToken()));
 
               if (details.getUpdateEventsSize() > 0) {

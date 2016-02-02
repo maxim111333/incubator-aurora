@@ -377,7 +377,7 @@ public class LogStorage implements NonVolatileStorage, DistributedSnapshotStore 
         .put(Op._Fields.SAVE_JOB_UPDATE, op -> {
           JobUpdate update = op.getSaveJobUpdate().getJobUpdate();
           writeBehindJobUpdateStore.saveJobUpdate(
-              IJobUpdate.build(update),
+              IJobUpdate.build(ThriftBackfill.backFillJobUpdate(update)),
               Optional.fromNullable(op.getSaveJobUpdate().getLockToken()));
         })
         .put(Op._Fields.SAVE_JOB_UPDATE_EVENT, op -> {
