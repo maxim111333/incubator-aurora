@@ -26,6 +26,7 @@ import org.apache.aurora.scheduler.storage.entities.IConstraint;
 import org.apache.aurora.scheduler.storage.entities.IDockerContainer;
 import org.apache.aurora.scheduler.storage.entities.ITaskConfig;
 import org.apache.aurora.scheduler.storage.entities.IValueConstraint;
+import org.apache.aurora.scheduler.storage.log.ThriftBackfill;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,7 +42,7 @@ class TaskConfigManager {
 
   private Optional<Long> getConfigRow(ITaskConfig config) {
     // We could optimize this slightly by first comparing the un-hydrated row and breaking early.
-
+    config = ThriftBackfill.backFillTaskConfig(config);
     Map<ITaskConfig, DbTaskConfig> rowsByConfig =
         Maps.uniqueIndex(
             configMapper.selectConfigsByJob(config.getJob()),
