@@ -90,16 +90,16 @@ prevent users from interacting with the scheduler during the restoration process
 troubleshooting by reducing the scheduler log noise and prevent users from making changes that will
 be erased after the backup snapshot is restored.
 
-NOTE: if you follow the above advice you will have to run all `aurora_admin` commands listed in
-[Restore from backup](#restore-from-backup) section locally on the leading scheduler. In that case,
-make sure the [clusters.json](client-commands.md#cluster-configuration) file configured to access
-scheduler directly via `scheduler_uri` setting. Also, depending on your particular security approach
-you will need to either turn off scheduler authentication by removing scheduler
-`-http_authentication_mechanism` flag or make sure the direct scheduler access is properly
-authorized. E.g.: in case of Kerberos you will need to make a `/etc/hosts` file change to match
-your local IP to the scheduler URL configured in keytabs, e.g.:
+* Configure `aurora_admin` access to run all `aurora_admin` commands listed in
+  [Restore from backup](#restore-from-backup) section locally on the leading scheduler:
+  * Make sure the [clusters.json](client-commands.md#cluster-configuration) file configured to
+    access scheduler directly. Set `scheduler_uri` setting and remove `zk`.
+  * Depending on your particular security approach you will need to either turn off scheduler
+    authorization by removing scheduler `-http_authentication_mechanism` flag or make sure the
+    direct scheduler access is properly authorized. E.g.: in case of Kerberos you will need to make
+    a `/etc/hosts` file change to match your local IP to the scheduler URL configured in keytabs:
 
-    <local_ip> <scheduler_domain_in_keytabs>
+        <local_ip> <scheduler_domain_in_keytabs>
 
 * Next steps are required to put scheduler into a partially disabled state where it would still be
 able to accept storage recovery requests but unable to schedule or change task states. This may be
@@ -128,8 +128,6 @@ Get rid of the corrupted files and re-initialize Mesos replicate log:
 At this point the scheduler is ready to rehydrate from the backup:
 
 * Identify the leading scheduler by:
-  * running `aurora_admin get_scheduler --bypass-leader-redirect <cluster>` - if scheduler is
-    responsive
   * examining the `scheduler_lifecycle_LEADER_AWAITING_REGISTRATION` metric at the scheduler
     `/vars` endpoint
   * examining scheduler logs
