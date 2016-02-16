@@ -145,7 +145,7 @@ via `aurora_admin scheduler_print_recovery_tasks --bypass-leader-redirect` and
 `scheduler_delete_recovery_tasks --bypass-leader-redirect` commands.
 See `aurora_admin help <command>` for usage details.
 
-* Commit recovery. This instructs the scheduler to overwrite the existing Mesosreplicated log with
+* Commit recovery. This instructs the scheduler to overwrite the existing Mesos replicated log with
 the provided backup snapshot and initiate a mandatory failover
 `aurora_admin scheduler_commit_recovery --bypass-leader-redirect  <cluster>`
 
