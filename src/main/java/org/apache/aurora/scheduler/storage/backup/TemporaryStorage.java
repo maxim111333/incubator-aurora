@@ -73,7 +73,8 @@ interface TemporaryStorage {
       final SnapshotStore<Snapshot> snapshotStore = new SnapshotStoreImpl(
           buildInfo,
           clock,
-          storage);
+          storage,
+          null);
       snapshotStore.applySnapshot(snapshot);
 
       return new TemporaryStorage() {

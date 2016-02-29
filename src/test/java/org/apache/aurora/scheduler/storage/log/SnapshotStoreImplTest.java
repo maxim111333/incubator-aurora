@@ -80,7 +80,8 @@ public class SnapshotStoreImplTest extends EasyMockTest {
     snapshotStore = new SnapshotStoreImpl(
         generateBuildInfo(),
         clock,
-        storageUtil.storage);
+        storageUtil.storage,
+        null);
   }
 
   private static IJobUpdateKey makeKey(String id) {

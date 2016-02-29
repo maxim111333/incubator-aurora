@@ -13,13 +13,23 @@
  */
 package org.apache.aurora.scheduler.storage.log;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.sql.DataSource;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
 import org.apache.aurora.common.inject.TimedInterceptor.Timed;
 import org.apache.aurora.common.util.BuildInfo;
@@ -69,12 +79,24 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
         // It's important for locks to be replayed first, since there are relations that expect
         // references to be valid on insertion.
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           snapshot.setLocks(ILock.toBuildersSet(store.getLockStore().fetchLocks()));
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (snapshot.isSetDbScript()) {
+            LOG.info("Skipping locks due to dbsnapshot populated");
+            return;
+          }
           store.getLockStore().deleteLocks();
 
           if (snapshot.isSetLocks()) {
@@ -86,13 +108,25 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider storeProvider, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           snapshot.setHostAttributes(
-              IHostAttributes.toBuildersSet(storeProvider.getAttributeStore().getHostAttributes()));
+              IHostAttributes.toBuildersSet(store.getAttributeStore().getHostAttributes()));
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (snapshot.isSetDbScript()) {
+            LOG.info("Skipping attributes due to dbsnapshot populated");
+            return;
+          }
           store.getAttributeStore().deleteHostAttributes();
 
           if (snapshot.isSetHostAttributes()) {
@@ -111,13 +145,21 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           snapshot.setTasks(
               IScheduledTask.toBuildersSet(store.getTaskStore().fetchTasks(Query.unscoped())));
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           store.getUnsafeTaskStore().deleteAllTasks();
 
           if (snapshot.isSetTasks()) {
@@ -128,7 +170,11 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           ImmutableSet.Builder<StoredCronJob> jobs = ImmutableSet.builder();
 
           for (IJobConfiguration config : store.getCronJobStore().fetchJobs()) {
@@ -138,7 +184,11 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           store.getCronJobStore().deleteJobs();
 
           if (snapshot.isSetCronJobs()) {
@@ -151,12 +201,24 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           // SchedulerMetadata is updated outside of the static list of SnapshotFields
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (snapshot.isSetDbScript()) {
+            LOG.info("Skipping framework due to dbsnapshot populated");
+            return;
+          }
           if (snapshot.isSetSchedulerMetadata()
               && snapshot.getSchedulerMetadata().isSetFrameworkId()) {
             // No delete necessary here since this is a single value.
@@ -168,7 +230,11 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           ImmutableSet.Builder<QuotaConfiguration> quotas = ImmutableSet.builder();
           for (Map.Entry<String, IResourceAggregate> entry
               : store.getQuotaStore().fetchQuotas().entrySet()) {
@@ -180,7 +246,15 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (snapshot.isSetDbScript()) {
+            LOG.info("Skipping quotas due to dbsnapshot populated");
+            return;
+          }
           store.getQuotaStore().deleteQuotas();
 
           if (snapshot.isSetQuotaConfigurations()) {
@@ -193,15 +267,27 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       },
       new SnapshotField() {
         @Override
-        public void saveToSnapshot(StoreProvider store, Snapshot snapshot) {
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           snapshot.setJobUpdateDetails(store.getJobUpdateStore().fetchAllJobUpdateDetails());
         }
 
         @Override
-        public void restoreFromSnapshot(MutableStoreProvider store, Snapshot snapshot) {
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
           JobUpdateStore.Mutable updateStore = store.getJobUpdateStore();
           updateStore.deleteAllUpdatesAndEvents();
 
+          if (snapshot.isSetDbScript()) {
+            LOG.info("Skipping updates due to dbsnapshot populated");
+            return;
+          }
           if (snapshot.isSetJobUpdateDetails()) {
             for (StoredJobUpdateDetails storedDetails : snapshot.getJobUpdateDetails()) {
               JobUpdateDetails details = storedDetails.getDetails();
@@ -227,18 +313,79 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
             }
           }
         }
+      },
+      new SnapshotField() {
+        @Override
+        public void saveToSnapshot(
+            StoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (dataSource == null) {
+            LOG.info("Not saving dbsnapshot");
+            return;
+          }
+
+          LOG.info("Saving dbsnapshot");
+          try (Connection c = dataSource.getConnection()) {
+            try (PreparedStatement ps = c.prepareStatement("SCRIPT")) {
+              ResultSet rs = ps.executeQuery();
+              ImmutableList.Builder<String> builder = ImmutableList.builder();
+              while (rs.next()) {
+                String columnValue = rs.getString("SCRIPT");
+                builder.add(columnValue + "\n");
+              }
+              snapshot.setDbScript(builder.build());
+            }
+          } catch (SQLException e) {
+            Throwables.propagate(e);
+          }
+        }
+
+        @Override
+        public void restoreFromSnapshot(
+            MutableStoreProvider store,
+            Snapshot snapshot,
+            DataSource dataSource) {
+
+          if (snapshot.isSetDbScript()) {
+            try (Connection c = dataSource.getConnection()) {
+              LOG.info("Dropping all tables");
+              try(PreparedStatement drop = c.prepareStatement("DROP ALL OBJECTS")) {
+                drop.executeUpdate();
+              }
+
+              LOG.info("Restoring dbsnapshot. Row count: " + snapshot.getDbScript().size());
+              List<List<String>> batches = Lists.partition(snapshot.getDbScript(), 20);
+              for (List<String> batch : batches) {
+                try(PreparedStatement restore = c.prepareStatement(Joiner.on("").join(batch))) {
+                  restore.executeUpdate();
+                }
+              }
+            } catch (SQLException e) {
+              Throwables.propagate(e);
+            }
+          }
+        }
       }
   );
 
   private final BuildInfo buildInfo;
   private final Clock clock;
   private final Storage storage;
+  private final DataSource dataSource;
 
   @Inject
-  public SnapshotStoreImpl(BuildInfo buildInfo, Clock clock, @Volatile Storage storage) {
+  public SnapshotStoreImpl(
+      BuildInfo buildInfo,
+      Clock clock,
+      @Volatile Storage storage,
+      DataSource dataSource) {
+
     this.buildInfo = requireNonNull(buildInfo);
     this.clock = requireNonNull(clock);
     this.storage = requireNonNull(storage);
+    this.dataSource = dataSource;
   }
 
   @Timed("snapshot_create")
@@ -253,7 +400,7 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
       // one of the field closures is mean and tries to apply a timestamp.
       long timestamp = clock.nowMillis();
       for (SnapshotField field : SNAPSHOT_FIELDS) {
-        field.saveToSnapshot(storeProvider, snapshot);
+        field.saveToSnapshot(storeProvider, snapshot, dataSource);
       }
 
       SchedulerMetadata metadata = new SchedulerMetadata()
@@ -273,16 +420,21 @@ public class SnapshotStoreImpl implements SnapshotStore<Snapshot> {
 
     storage.write((NoResult.Quiet) storeProvider -> {
       LOG.info("Restoring snapshot.");
-
       for (SnapshotField field : SNAPSHOT_FIELDS) {
-        field.restoreFromSnapshot(storeProvider, snapshot);
+        field.restoreFromSnapshot(storeProvider, snapshot, dataSource);
       }
     });
   }
 
   private interface SnapshotField {
-    void saveToSnapshot(StoreProvider storeProvider, Snapshot snapshot);
+    void saveToSnapshot(
+        StoreProvider storeProvider,
+        Snapshot snapshot,
+        DataSource dataSource);
 
-    void restoreFromSnapshot(MutableStoreProvider storeProvider, Snapshot snapshot);
+    void restoreFromSnapshot(
+        MutableStoreProvider storeProvider,
+        Snapshot snapshot,
+        DataSource dataSource);
   }
 }

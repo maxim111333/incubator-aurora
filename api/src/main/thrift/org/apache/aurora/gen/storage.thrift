@@ -149,6 +149,7 @@ struct Snapshot {
   8: set<QuotaConfiguration> quotaConfigurations
   9: set<api.Lock> locks
   10: set<StoredJobUpdateDetails> jobUpdateDetails
+  11: list<string> dbScript
 }
 
 // A message header that calls out the number of expected FrameChunks to follow to form a complete

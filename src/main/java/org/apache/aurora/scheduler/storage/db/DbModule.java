@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import javax.inject.Singleton;
+import javax.sql.DataSource;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -116,7 +117,7 @@ public final class DbModule extends PrivateModule {
     Map<String, String> args = ImmutableMap.<String, String>builder()
         .putAll(jdbcUriArgs)
         // We always disable the MvStore, as it is in beta as of this writing.
-        .put("MV_STORE", "false")
+        //.put("MV_STORE", "false")
         // READ COMMITTED transaction isolation.  More details here
         // http://www.h2database.com/html/advanced.html?#transaction_isolation
         .put("LOCK_MODE", "3")
@@ -245,6 +246,7 @@ public final class DbModule extends PrivateModule {
         expose(TaskMapper.class);
         expose(TaskConfigManager.class);
         expose(JobKeyMapper.class);
+        expose(DataSource.class);
       }
     });
     install(taskStoresModule);
