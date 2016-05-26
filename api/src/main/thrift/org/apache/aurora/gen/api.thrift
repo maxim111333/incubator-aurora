@@ -223,6 +223,7 @@ union Resource {
   2: i64 ramMb
   3: i64 diskMb
   4: string namedPort
+  5: i64 numGpus
 }
 
 /** Description of the tasks contained within a job. */
