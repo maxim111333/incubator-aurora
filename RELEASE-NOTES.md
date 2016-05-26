@@ -31,9 +31,12 @@
   1. Set `-allow_gpu_resource` to false
   2. Delete all jobs with GPU resource
   3. Wait until GPU task history is pruned. You may speed it up by changing the history retention
-    flags (e.g.: `-history_prune_threshold=1mins` and `-history_max_per_job_threshold=0`)
-  4. Ensure a new snapshot is created by running `aurora_admin scheduler_snapshot <cluster>`
-  5. Rollback to previous version
+    flags, e.g.: `-history_prune_threshold=1mins` and `-history_max_per_job_threshold=0`
+  4. In case there were GPU job updates created, prune job update history for affected jobs from
+    `/h2console` endpoint or reduce job update pruning thresholds, e.g.:
+    `-job_update_history_pruning_threshold=1mins` and `-job_update_history_per_job_threshold=0`
+  5. Ensure a new snapshot is created by running `aurora_admin scheduler_snapshot <cluster>`
+  6. Rollback to previous version
   
 
 ### Deprecations and removals:
