@@ -25,14 +25,14 @@
 - Added experimental support for Mesos GPU resource. This feature will be available in Mesos 0.29.0
   and is disabled by default. Use `-allow_gpu_resource` flag to enable it.
   
-  _IMPORTANT: once this feature is enabled, creating jobs with GPU resource will make scheduler
+  *IMPORTANT: once this feature is enabled, creating jobs with GPU resource will make scheduler
   snapshot backwards incompatible. Scheduler will be unable to read snapshot if rolled back to
-  previous version. If rollback is absolutely necessary, perform the following steps:_
-  1. _Set `-allow_gpu_resource` to false_
-  2. _Delete all jobs with GPU resource_
-  3. _Wait until GPU task history is pruned. You may speed it up by changing the history retention
-    flags (see `PruningModule` for details)_
-  4. _Rollback to previous version_
+  previous version. If rollback is absolutely necessary, perform the following steps:*
+  1. Set `-allow_gpu_resource` to false
+  2. Delete all jobs with GPU resource
+  3. Wait until GPU task history is pruned. You may speed it up by changing the history retention
+    flags (see `PruningModule` for details)
+  4. Rollback to previous version
   
 
 ### Deprecations and removals:
