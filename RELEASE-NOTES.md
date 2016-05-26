@@ -29,7 +29,7 @@
   snapshot backwards incompatible. Scheduler will be unable to read snapshot if rolled back to
   previous version. If rollback is absolutely necessary, perform the following steps:**
   1. Set `-allow_gpu_resource` to false
-  2. Delete all jobs with GPU resource
+  2. Delete all jobs with GPU resource (including cron job schedules if applicable)
   3. Wait until GPU task history is pruned. You may speed it up by changing the history retention
     flags, e.g.: `-history_prune_threshold=1mins` and `-history_max_per_job_threshold=0`
   4. In case there were GPU job updates created, prune job update history for affected jobs from
