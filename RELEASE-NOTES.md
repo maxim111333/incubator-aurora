@@ -22,6 +22,7 @@
 - Upgraded to pystachio 0.8.1 to pick up support for the new [Choice type](https://github.com/wickman/pystachio/blob/v0.8.1/README.md#choices).
 - The `container` property of a `Job` is now a Choice of either a `Container` holder, or a direct
   reference to either a `Docker` or `Mesos` container.
+- Added experimental support for Mesos GPU resource. This feature will be available in Mesos 0.29.0.
 
 ### Deprecations and removals:
 
@@ -35,6 +36,8 @@
   sandbox.
 - Setting the `container` property of a `Job` to a `Container` holder is deprecated in favor of
   setting it directly to the appropriate (i.e. `Docker` or `Mesos`) container type.
+- Deprecated `numCpus`, `ramMb` and `diskMb` fields in `TaskConfig` and `ResourceAggregate` thrift
+  structs. Use `set<Resource> resources` to specify task resources or quota values.
 
 0.13.0
 ------
