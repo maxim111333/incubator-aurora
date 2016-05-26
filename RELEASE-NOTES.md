@@ -24,6 +24,7 @@
   reference to either a `Docker` or `Mesos` container.
 - Added experimental support for Mesos GPU resource. This feature will be available in Mesos 0.29.0
   and is disabled by default. Use `-allow_gpu_resource` flag to enable it.
+  
   _IMPORTANT: once this feature is enabled, creating jobs with GPU resource will make scheduler
   snapshot backwards incompatible. Scheduler will be unable to read snapshot if rolled back to
   previous version. If rollback is absolutely necessary, perform the following steps:_
