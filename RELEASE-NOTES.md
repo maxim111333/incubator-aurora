@@ -31,8 +31,9 @@
   1. Set `-allow_gpu_resource` to false
   2. Delete all jobs with GPU resource
   3. Wait until GPU task history is pruned. You may speed it up by changing the history retention
-    flags (see `PruningModule` for details)
-  4. Rollback to previous version
+    flags (e.g: `-history_prune_threshold=1mins` and `-history_max_per_job_threshold=0`)
+  4. Ensure a new snapshot is created by running `aurora_admin scheduler_snapshot <cluster>`  
+  5. Rollback to previous version
   
 
 ### Deprecations and removals:
