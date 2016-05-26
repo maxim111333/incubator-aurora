@@ -22,7 +22,17 @@
 - Upgraded to pystachio 0.8.1 to pick up support for the new [Choice type](https://github.com/wickman/pystachio/blob/v0.8.1/README.md#choices).
 - The `container` property of a `Job` is now a Choice of either a `Container` holder, or a direct
   reference to either a `Docker` or `Mesos` container.
-- Added experimental support for Mesos GPU resource. This feature will be available in Mesos 0.29.0.
+- Added experimental support for Mesos GPU resource. This feature will be available in Mesos 0.29.0
+  and is disabled by default. Use `-allow_gpu_resource` flag to enable it.
+  _IMPORTANT: once this feature is enabled, creating jobs with GPU resource will make scheduler
+  snapshot backwards incompatible. Scheduler will be unable to read snapshot if rolled back to
+  previous version. If rollback is absolutely necessary, perform the following steps:_
+  1. _Set `-allow_gpu_resource` to false_
+  2. _Delete all jobs with GPU resource_
+  3. _Wait until GPU task history is pruned. You may speed it up by changing the history retention
+    flags (see `PruningModule` for details)_
+  4. _Rollback to previous version_
+  
 
 ### Deprecations and removals:
 
