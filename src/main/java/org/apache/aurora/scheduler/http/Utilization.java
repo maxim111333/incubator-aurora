@@ -37,8 +37,8 @@ import org.apache.aurora.common.base.MorePreconditions;
 import org.apache.aurora.common.util.templating.StringTemplateHelper;
 import org.apache.aurora.common.util.templating.StringTemplateHelper.TemplateException;
 import org.apache.aurora.scheduler.base.Query;
+import org.apache.aurora.scheduler.resources.ResourceType;
 import org.apache.aurora.scheduler.stats.ResourceCounter;
-import org.apache.aurora.scheduler.stats.ResourceCounter.GlobalMetric;
 import org.apache.aurora.scheduler.stats.ResourceCounter.Metric;
 import org.apache.aurora.scheduler.stats.ResourceCounter.MetricType;
 import org.apache.aurora.scheduler.storage.entities.IServerInfo;
@@ -123,6 +123,18 @@ public class Utilization {
       return display.link;
     }
 
+    public long getCpu() {
+      return getBag().valueOf(ResourceType.CPUS).longValue();
+    }
+
+    public long getRam() {
+      return getBag().valueOf(ResourceType.RAM_MB).longValue();
+    }
+
+    public long getDisk() {
+      return getBag().valueOf(ResourceType.DISK_MB).longValue();
+    }
+
     @Override
     public boolean equals(Object o) {
       if (!(o instanceof DisplayMetric)) {
@@ -141,7 +153,7 @@ public class Utilization {
     }
   }
 
-  private static final Function<GlobalMetric, DisplayMetric> TO_DISPLAY =
+  private static final Function<Metric, DisplayMetric> TO_DISPLAY =
       count -> new DisplayMetric(
           new Display(
               count.type.name().replace('_', ' ').toLowerCase(),
