@@ -37,6 +37,8 @@
   sandbox.
 - Setting the `container` property of a `Job` to a `Container` holder is deprecated in favor of
   setting it directly to the appropriate (i.e. `Docker` or `Mesos`) container type.
+- The scheduler `resources_*_ram_gb` and `resources_*_disk_gb` stats have been renamed to
+  `resources_*_ram_mb` and `resources_*_disk_mb` respectively. Note the unit change: GB -> MB.
 
 0.13.0
 ------
